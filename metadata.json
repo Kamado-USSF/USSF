@@ -1,0 +1,6 @@
+{
+  "name": "Aegis Tactical - Elite Defense Systems & 15s Mission Reel",
+  "description": "Premium tactical systems, military force operations, interactive 15-second cinematic video reel, and scroll-animated mission showcases.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
