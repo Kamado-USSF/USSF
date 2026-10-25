@@ -1,4 +1,4 @@
-import type { PersistentState } from './db';
+import type { PersistentState } from './db.js';
 
 export function toPublicState(state: PersistentState) {
   const {

@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { requireAdminToken } from '../../lib/auth';
-import { getSql, sendApiError } from '../../lib/db';
-import { validateAsset } from '../../lib/validation';
+import { requireAdminToken } from '../../lib/auth.js';
+import { getSql, sendApiError } from '../../lib/db.js';
+import { validateAsset } from '../../lib/validation.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const id = typeof req.query.id === 'string' ? req.query.id : '';

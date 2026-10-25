@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getSql, sendApiError } from '../lib/db';
-import { validateApplication } from '../lib/validation';
+import { getSql, sendApiError } from '../lib/db.js';
+import { validateApplication } from '../lib/validation.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed.' });
