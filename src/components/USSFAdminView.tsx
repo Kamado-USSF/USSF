@@ -63,7 +63,9 @@ interface USSFAdminViewProps {
   ranks?: typeof USSF_RANKS;
   onUpdateRanks?: (ranks: typeof USSF_RANKS) => void;
   assets?: USSFAssetItem[];
-  onUpdateAssets?: (assets: USSFAssetItem[]) => void;
+  onCreateAsset?: (asset: USSFAssetItem) => Promise<USSFAssetItem[]>;
+  onUpdateAsset?: (asset: USSFAssetItem) => Promise<USSFAssetItem[]>;
+  onDeleteAsset?: (id: string) => Promise<USSFAssetItem[]>;
   achievements?: USSFAchievement[];
   onUpdateAchievements?: (achievements: USSFAchievement[]) => void;
   milestoneChoices?: MilestoneRewardChoice[];
@@ -100,7 +102,9 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
   ranks = USSF_RANKS,
   onUpdateRanks,
   assets = [],
-  onUpdateAssets,
+  onCreateAsset,
+  onUpdateAsset,
+  onDeleteAsset,
   achievements = INITIAL_ACHIEVEMENTS,
   onUpdateAchievements,
   milestoneChoices = DEFAULT_MILESTONE_CHOICES,
@@ -187,6 +191,8 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
   const [editableAssetsList, setEditableAssetsList] = useState<USSFAssetItem[]>(
     assets && assets.length > 0 ? assets : INITIAL_SKINS_AND_SHADERS
   );
+  const [assetError, setAssetError] = useState<string | null>(null);
+  const [isSavingAssets, setIsSavingAssets] = useState(false);
   const [newAssetType, setNewAssetType] = useState<'SKIN' | 'VEHICLE_SHADER'>('SKIN');
   const [newAssetTitle, setNewAssetTitle] = useState('');
   const [newAssetCode, setNewAssetCode] = useState('');
@@ -195,6 +201,25 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
   const [newAssetDescription, setNewAssetDescription] = useState('');
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
   const [editingImageUrl, setEditingImageUrl] = useState('');
+
+  useEffect(() => {
+    setEditableAssetsList(current => JSON.stringify(current) === JSON.stringify(assets) ? current : assets);
+  }, [assets]);
+
+  const persistAssetMutation = async (mutation: Promise<USSFAssetItem[]>) => {
+    setIsSavingAssets(true);
+    setAssetError(null);
+    try {
+      const savedAssets = await mutation;
+      setEditableAssetsList(savedAssets);
+      return true;
+    } catch (err: any) {
+      setAssetError(err?.message || 'Asset operation failed.');
+      return false;
+    } finally {
+      setIsSavingAssets(false);
+    }
+  };
 
   // Daily Rewards Editor
   const [calendarMode, setCalendarMode] = useState<'7days' | '30days'>('7days');
@@ -1251,6 +1276,7 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
             {/* SUBTAB 3: TACTICAL SKINS & CAR SHADER IMAGES FEATURE */}
             {pageInfoSubTab === 'skinsShaders' && (
               <div className="space-y-6">
+                {assetError && <p role="alert" className="border border-rose-700 bg-rose-950/40 p-3 text-xs text-rose-300">{assetError}</p>}
                 {/* Add New Skin/Shader Image Box */}
                 <div className="p-4 rounded-xl border border-neutral-800 bg-neutral-950/80 space-y-3 font-data text-xs">
                   <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
@@ -1334,8 +1360,13 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
                   <div className="flex justify-end pt-1">
                     <button
                       type="button"
-                      onClick={() => {
+                      disabled={isSavingAssets}
+                      onClick={async () => {
                         if (!newAssetTitle.trim() || !newAssetImageUrl.trim()) {
+                          return;
+                        }
+                        if (!onCreateAsset) {
+                          setAssetError('Asset creation is not connected to the server.');
                           return;
                         }
                         const newItem: USSFAssetItem = {
@@ -1348,12 +1379,7 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
                           description: newAssetDescription.trim() || 'Official Special Forces tactical gear.',
                           category: newAssetType === 'SKIN' ? 'Special Forces' : 'Vehicle'
                         };
-                        const updated = [newItem, ...editableAssetsList];
-                        setEditableAssetsList(updated);
-                        onUpdateAssets?.(updated);
-                        try {
-                          localStorage.setItem('ussf_custom_assets', JSON.stringify(updated));
-                        } catch (e) {}
+                        if (!await persistAssetMutation(onCreateAsset(newItem))) return;
                         setNewAssetTitle('');
                         setNewAssetCode('');
                         setNewAssetImageUrl('');
@@ -1418,14 +1444,15 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => {
+                                  disabled={isSavingAssets}
+                                  onClick={async () => {
                                     if (!editingImageUrl.trim()) return;
-                                    const updated = editableAssetsList.map(a => a.id === asset.id ? { ...a, imageUrl: editingImageUrl.trim() } : a);
-                                    setEditableAssetsList(updated);
-                                    onUpdateAssets?.(updated);
-                                    try {
-                                      localStorage.setItem('ussf_custom_assets', JSON.stringify(updated));
-                                    } catch (e) {}
+                                    if (!onUpdateAsset) {
+                                      setAssetError('Asset updates are not connected to the server.');
+                                      return;
+                                    }
+                                    const updatedAsset = { ...asset, imageUrl: editingImageUrl.trim() };
+                                    if (!await persistAssetMutation(onUpdateAsset(updatedAsset))) return;
                                     setEditingAssetId(null);
                                     setPageInfoSaved(true);
                                     setTimeout(() => setPageInfoSaved(false), 4000);
@@ -1450,14 +1477,14 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
                               </button>
                               <button
                                 type="button"
-                                onClick={() => {
+                                disabled={isSavingAssets}
+                                onClick={async () => {
                                   if (confirm(`Permanently delete "${asset.title}" from armory and motor pool?`)) {
-                                    const updated = editableAssetsList.filter(a => a.id !== asset.id);
-                                    setEditableAssetsList(updated);
-                                    onUpdateAssets?.(updated);
-                                    try {
-                                      localStorage.setItem('ussf_custom_assets', JSON.stringify(updated));
-                                    } catch (e) {}
+                                    if (!onDeleteAsset) {
+                                      setAssetError('Asset deletion is not connected to the server.');
+                                      return;
+                                    }
+                                    if (!await persistAssetMutation(onDeleteAsset(asset.id))) return;
                                     setPageInfoSaved(true);
                                     setTimeout(() => setPageInfoSaved(false), 4000);
                                   }

@@ -61,9 +61,23 @@ async function parseApiResponse<T extends ApiResponse>(res: Response, action: st
   }
 
   if (!res.ok || json.success === false) {
+    if (res.status === 401 && typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem('ussf_admin_api_token');
+    }
     throw new Error(json.error || `${action} failed: HTTP ${res.status}`);
   }
   return json;
+}
+
+function adminHeaders(): HeadersInit {
+  if (typeof window === 'undefined') throw new Error('Admin writes require a browser session.');
+  let token = sessionStorage.getItem('ussf_admin_api_token');
+  if (!token) {
+    token = window.prompt('Enter the administrator API token configured in Vercel:')?.trim() || '';
+    if (!token) throw new Error('Administrator API token was not provided.');
+    sessionStorage.setItem('ussf_admin_api_token', token);
+  }
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 }
 
 export const api = {
@@ -240,11 +254,43 @@ export const api = {
     return json.request;
   },
 
+  async createAsset(asset: USSFAssetItem): Promise<USSFAssetItem[]> {
+    const res = await fetch('/api/assets', {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify(asset)
+    });
+    const json = await parseApiResponse<{ success: boolean; assets?: USSFAssetItem[]; error?: string }>(res, 'Create asset');
+    if (!json.assets) throw new Error('Create asset failed: response did not include the saved asset list.');
+    return json.assets;
+  },
+
+  async updateAsset(asset: USSFAssetItem): Promise<USSFAssetItem[]> {
+    const res = await fetch(`/api/assets/${encodeURIComponent(asset.id)}`, {
+      method: 'PUT',
+      headers: adminHeaders(),
+      body: JSON.stringify(asset)
+    });
+    const json = await parseApiResponse<{ success: boolean; assets?: USSFAssetItem[]; error?: string }>(res, 'Update asset');
+    if (!json.assets) throw new Error('Update asset failed: response did not include the saved asset list.');
+    return json.assets;
+  },
+
+  async deleteAsset(id: string): Promise<USSFAssetItem[]> {
+    const res = await fetch(`/api/assets/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: adminHeaders()
+    });
+    const json = await parseApiResponse<{ success: boolean; assets?: USSFAssetItem[]; error?: string }>(res, 'Delete asset');
+    if (!json.assets) throw new Error('Delete asset failed: response did not include the saved asset list.');
+    return json.assets;
+  },
+
   // 7. Group Info
   async updateGroupInfo(info: Partial<typeof USSF_GROUP_INFO>): Promise<typeof USSF_GROUP_INFO> {
     const res = await fetch('/api/group-info', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: adminHeaders(),
       body: JSON.stringify(info)
     });
     const json = await parseApiResponse<{ success: boolean; groupInfo?: typeof USSF_GROUP_INFO; error?: string }>(res, 'Update group specifications');

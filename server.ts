@@ -1,9 +1,11 @@
 import express from 'express';
+import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import fs from 'fs';
 import path from 'path';
-import { randomUUID } from 'crypto';
+import { randomUUID, timingSafeEqual } from 'crypto';
 import { fileURLToPath } from 'url';
+import type { Request, Response } from 'express';
 import { 
   INITIAL_MEMBERS, 
   INITIAL_FIELD_REPORTS, 
@@ -42,6 +44,10 @@ import {
   USSFAssetItem,
   KAMADO_ADMIN_ACCOUNT
 } from './src/data/ussfData';
+import { validateAsset, validateGroupInfo } from './lib/validation';
+
+dotenv.config({ path: '.env.local' });
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -153,6 +159,27 @@ function saveDatabase(db: AuthoritativeDatabase): boolean {
     console.error('Error saving database:', err);
     return false;
   }
+}
+
+function requireAdminToken(req: Request, res: Response): boolean {
+  const expectedToken = process.env.USSF_ADMIN_API_TOKEN;
+  if (!expectedToken) {
+    res.status(503).json({ success: false, error: 'USSF_ADMIN_API_TOKEN is not configured.' });
+    return false;
+  }
+  if (Buffer.byteLength(expectedToken) < 32) {
+    res.status(503).json({ success: false, error: 'USSF_ADMIN_API_TOKEN must contain at least 32 bytes.' });
+    return false;
+  }
+  const authorization = req.headers.authorization || '';
+  const providedToken = authorization.replace(/^Bearer\s+/i, '');
+  const expected = Buffer.from(expectedToken);
+  const provided = Buffer.from(providedToken);
+  if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
+    res.status(401).json({ success: false, error: 'Administrator API token is missing or invalid.' });
+    return false;
+  }
+  return true;
 }
 
 async function startServer() {
@@ -571,27 +598,59 @@ async function startServer() {
     }
   });
 
+  app.get('/api/assets', (req, res) => {
+    db = loadDatabase();
+    return res.json({ success: true, assets: db.customAssets || [] });
+  });
+
+  app.post('/api/assets', (req, res) => {
+    if (!requireAdminToken(req, res)) return;
+    const validation = validateAsset(req.body);
+    if (!validation.ok) return res.status(400).json({ success: false, error: validation.error });
+    db = loadDatabase();
+    db.customAssets ||= [];
+    if (db.customAssets.some(asset => asset.id === validation.value.id)) {
+      return res.status(409).json({ success: false, error: 'Asset ID already exists.' });
+    }
+    db.customAssets.unshift(validation.value);
+    if (!saveDatabase(db)) return res.status(500).json({ success: false, error: 'Could not persist asset.' });
+    return res.status(201).json({ success: true, assets: db.customAssets });
+  });
+
+  app.put('/api/assets/:id', (req, res) => {
+    if (!requireAdminToken(req, res)) return;
+    const validation = validateAsset(req.body);
+    if (!validation.ok) return res.status(400).json({ success: false, error: validation.error });
+    if (validation.value.id !== req.params.id) {
+      return res.status(400).json({ success: false, error: 'Asset ID does not match the requested resource.' });
+    }
+    db = loadDatabase();
+    const index = (db.customAssets || []).findIndex(asset => asset.id === req.params.id);
+    if (index < 0) return res.status(404).json({ success: false, error: 'Asset not found.' });
+    db.customAssets[index] = validation.value;
+    if (!saveDatabase(db)) return res.status(500).json({ success: false, error: 'Could not persist asset changes.' });
+    return res.json({ success: true, assets: db.customAssets });
+  });
+
+  app.delete('/api/assets/:id', (req, res) => {
+    if (!requireAdminToken(req, res)) return;
+    db = loadDatabase();
+    const originalAssets = db.customAssets || [];
+    const customAssets = originalAssets.filter(asset => asset.id !== req.params.id);
+    if (customAssets.length === originalAssets.length) return res.status(404).json({ success: false, error: 'Asset not found.' });
+    db.customAssets = customAssets;
+    if (!saveDatabase(db)) return res.status(500).json({ success: false, error: 'Could not persist asset deletion.' });
+    return res.json({ success: true, assets: db.customAssets });
+  });
+
   // 7. Group Info & Announcements
   app.post('/api/group-info', (req, res) => {
+    if (!requireAdminToken(req, res)) return;
     try {
-      const info = req.body;
-      if (!info || typeof info !== 'object' || Array.isArray(info)) {
-        return res.status(400).json({ success: false, error: 'Group specification updates must be a JSON object.' });
-      }
-      const editableFields = [
-        'name', 'level', 'founder', 'coFounder', 'commander', 'leaders', 'motto',
-        'activeSince', 'tagUsage', 'commandCenters', 'skinsAvailable', 'carShadersAvailable'
-      ] as const;
-      const updates = Object.fromEntries(
-        editableFields
-          .filter(field => Object.prototype.hasOwnProperty.call(info, field))
-          .map(field => [field, info[field]])
-      );
-      if (Object.keys(updates).length === 0) {
-        return res.status(400).json({ success: false, error: 'No editable group specification fields were provided.' });
-      }
+      const validation = validateGroupInfo(req.body);
+      if (!validation.ok) return res.status(400).json({ success: false, error: validation.error });
       db = loadDatabase();
-      db.groupInfo = { ...db.groupInfo, ...updates };
+      db.groupInfo = { ...db.groupInfo, ...validation.value };
       if (!saveDatabase(db)) {
         return res.status(500).json({ success: false, error: 'Could not persist group specifications.' });
       }

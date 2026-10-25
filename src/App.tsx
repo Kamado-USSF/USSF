@@ -165,14 +165,7 @@ export default function App() {
       return INITIAL_ACHIEVEMENTS;
     }
   });
-  const [customAssets, setCustomAssets] = useState<USSFAssetItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('ussf_custom_assets');
-      return saved ? JSON.parse(saved) : INITIAL_SKINS_AND_SHADERS;
-    } catch {
-      return INITIAL_SKINS_AND_SHADERS;
-    }
-  });
+  const [customAssets, setCustomAssets] = useState<USSFAssetItem[]>(INITIAL_SKINS_AND_SHADERS);
   const [isLoadingScreen, setIsLoadingScreen] = useState<boolean>(true);
 
   // Tactical Notifications
@@ -627,12 +620,40 @@ export default function App() {
     showToast('Achievements & Commendations database synchronized.');
   };
 
-  const handleUpdateAssets = (newAssets: USSFAssetItem[]) => {
-    setCustomAssets(newAssets);
+  const handleCreateAsset = async (asset: USSFAssetItem) => {
     try {
-      localStorage.setItem('ussf_custom_assets', JSON.stringify(newAssets));
-    } catch (e) {}
-    showToast('Tactical skins & car shaders armory synchronized.');
+      const savedAssets = await api.createAsset(asset);
+      setCustomAssets(savedAssets);
+      showToast('Asset saved to the shared armory.');
+      return savedAssets;
+    } catch (err: any) {
+      showToast(`Error saving asset: ${err?.message || 'Request failed.'}`);
+      throw err;
+    }
+  };
+
+  const handleUpdateAsset = async (asset: USSFAssetItem) => {
+    try {
+      const savedAssets = await api.updateAsset(asset);
+      setCustomAssets(savedAssets);
+      showToast('Asset changes saved to the shared armory.');
+      return savedAssets;
+    } catch (err: any) {
+      showToast(`Error updating asset: ${err?.message || 'Request failed.'}`);
+      throw err;
+    }
+  };
+
+  const handleDeleteAsset = async (id: string) => {
+    try {
+      const savedAssets = await api.deleteAsset(id);
+      setCustomAssets(savedAssets);
+      showToast('Asset deleted from the shared armory.');
+      return savedAssets;
+    } catch (err: any) {
+      showToast(`Error deleting asset: ${err?.message || 'Request failed.'}`);
+      throw err;
+    }
   };
 
   const handleAddSocialPost = (post: SocialPost) => {
@@ -1239,7 +1260,9 @@ export default function App() {
                     achievements={achievements}
                     onUpdateAchievements={handleUpdateAchievements}
                     assets={customAssets}
-                    onUpdateAssets={handleUpdateAssets}
+                    onCreateAsset={handleCreateAsset}
+                    onUpdateAsset={handleUpdateAsset}
+                    onDeleteAsset={handleDeleteAsset}
                     milestoneChoices={milestoneChoices}
                     onUpdateMilestoneChoices={handleUpdateMilestoneChoices}
                   />
