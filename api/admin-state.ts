@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { requireAdminToken } from '../lib/auth';
-import { readState, sendApiError } from '../lib/db';
+import { requireAdminToken } from '../lib/auth.js';
+import { readState, sendApiError } from '../lib/db.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).json({ success: false, error: 'Method not allowed.' });
