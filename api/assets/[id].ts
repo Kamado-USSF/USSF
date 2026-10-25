@@ -61,6 +61,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!rows[0]) return res.status(404).json({ success: false, error: 'Asset not found.' });
     return res.status(200).json({ success: true, assets: rows[0].assets });
   } catch (error) {
-    return sendApiError(res, error);
+    return sendApiError(res, error, `${req.method} /api/assets/:id`);
   }
 }

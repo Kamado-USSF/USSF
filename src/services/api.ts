@@ -48,7 +48,7 @@ interface ApiResponse {
   error?: string;
 }
 
-async function parseApiResponse<T extends ApiResponse>(res: Response, action: string): Promise<T> {
+export async function parseApiResponse<T extends ApiResponse>(res: Response, action: string): Promise<T> {
   const contentType = res.headers.get('content-type') || 'unknown content type';
   const rawBody = await res.text();
   let json: T;
@@ -81,11 +81,22 @@ function adminHeaders(): HeadersInit {
 }
 
 export const api = {
+  hasAdminToken(): boolean {
+    return typeof sessionStorage !== 'undefined' && Boolean(sessionStorage.getItem('ussf_admin_api_token'));
+  },
+
   // 1. Fetch entire authoritative database state
   async getState(): Promise<AuthoritativeSystemState> {
     const res = await fetch('/api/state');
     const json = await parseApiResponse<{ success: boolean; data?: AuthoritativeSystemState; error?: string }>(res, 'Fetch state');
     if (!json.data) throw new Error('Fetch state failed: response did not include authoritative data.');
+    return json.data;
+  },
+
+  async getAdminState(): Promise<AuthoritativeSystemState> {
+    const res = await fetch('/api/admin-state', { headers: adminHeaders() });
+    const json = await parseApiResponse<{ success: boolean; data?: AuthoritativeSystemState; error?: string }>(res, 'Fetch administrative state');
+    if (!json.data) throw new Error('Fetch administrative state failed: response did not include authoritative data.');
     return json.data;
   },
 
@@ -96,10 +107,8 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(member)
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || 'Failed to save member to server');
-    }
+    const json = await parseApiResponse<{ success: boolean; member?: USSFMember; error?: string }>(res, 'Save member');
+    if (!json.member) throw new Error('Save member failed: response did not include the saved member.');
     return json.member;
   },
 
@@ -109,10 +118,8 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates)
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || 'Failed to update member');
-    }
+    const json = await parseApiResponse<{ success: boolean; member?: USSFMember; error?: string }>(res, 'Update member');
+    if (!json.member) throw new Error('Update member failed: response did not include the saved member.');
     return json.member;
   },
 
@@ -120,10 +127,7 @@ export const api = {
     const res = await fetch(`/api/members/${encodeURIComponent(id)}`, {
       method: 'DELETE'
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || 'Failed to delete member');
-    }
+    await parseApiResponse<{ success: boolean; error?: string }>(res, 'Delete member');
     return true;
   },
 
@@ -133,8 +137,8 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ presenceStatus })
     });
-    const json = await res.json();
-    return Boolean(json.success);
+    const json = await parseApiResponse<{ success: boolean; error?: string }>(res, 'Update presence');
+    return json.success;
   },
 
   // 3. Financial Claims
@@ -144,10 +148,8 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(claim)
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || 'Failed to record financial claim');
-    }
+    const json = await parseApiResponse<{ success: boolean; claim?: FinancialClaim; error?: string }>(res, 'Submit financial claim');
+    if (!json.claim) throw new Error('Submit financial claim failed: response did not include the saved claim.');
     return json.claim;
   },
 
@@ -157,10 +159,8 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status, note })
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || 'Failed to update claim status');
-    }
+    const json = await parseApiResponse<{ success: boolean; claim?: FinancialClaim; error?: string }>(res, 'Review financial claim');
+    if (!json.claim) throw new Error('Review financial claim failed: response did not include the saved claim.');
     return json.claim;
   },
 
@@ -171,10 +171,8 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(report)
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || 'Failed to submit report');
-    }
+    const json = await parseApiResponse<{ success: boolean; report?: FieldReport; error?: string }>(res, 'Submit report');
+    if (!json.report) throw new Error('Submit report failed: response did not include the saved report.');
     return json.report;
   },
 
@@ -184,10 +182,8 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status })
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || 'Failed to update report status');
-    }
+    const json = await parseApiResponse<{ success: boolean; report?: FieldReport; error?: string }>(res, 'Review report');
+    if (!json.report) throw new Error('Review report failed: response did not include the saved report.');
     return json.report;
   },
 
@@ -198,10 +194,8 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(promo)
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || 'Failed to submit promotion request');
-    }
+    const json = await parseApiResponse<{ success: boolean; promo?: PromotionRequest; error?: string }>(res, 'Submit promotion request');
+    if (!json.promo) throw new Error('Submit promotion request failed: response did not include the saved request.');
     return json.promo;
   },
 
@@ -211,10 +205,8 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status, approvingOfficer, feedback })
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || 'Failed to review promotion request');
-    }
+    const json = await parseApiResponse<{ success: boolean; promo?: PromotionRequest; error?: string }>(res, 'Review promotion request');
+    if (!json.promo) throw new Error('Review promotion request failed: response did not include the saved request.');
     return json.promo;
   },
 
@@ -236,10 +228,8 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status, reviewedBy, rejectionReason })
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || 'Failed to review application');
-    }
+    const json = await parseApiResponse<{ success: boolean; application?: RecruitmentApplication; error?: string }>(res, 'Review application');
+    if (!json.application) throw new Error('Review application failed: response did not include the saved application.');
     return json.application;
   },
 
@@ -305,10 +295,8 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(event)
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || 'Failed to save admin event');
-    }
+    const json = await parseApiResponse<{ success: boolean; event?: AdminEvent; error?: string }>(res, 'Save admin event');
+    if (!json.event) throw new Error('Save admin event failed: response did not include the saved event.');
     return json.event;
   },
 
@@ -319,10 +307,8 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(gift)
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || 'Failed to send birthday gift');
-    }
+    const json = await parseApiResponse<{ success: boolean; gift?: BirthdayGift; error?: string }>(res, 'Send birthday gift');
+    if (!json.gift) throw new Error('Send birthday gift failed: response did not include the saved gift.');
     return json.gift;
   },
 
@@ -333,19 +319,14 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(post)
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || 'Failed to publish social post');
-    }
+    const json = await parseApiResponse<{ success: boolean; post?: SocialPost; error?: string }>(res, 'Publish social post');
+    if (!json.post) throw new Error('Publish social post failed: response did not include the saved post.');
     return json.post;
   },
 
   // 11. Reset Clean DB
   async resetCleanDatabase(): Promise<void> {
     const res = await fetch('/api/reset-clean', { method: 'POST' });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || 'Failed to reset database');
-    }
+    await parseApiResponse<{ success: boolean; error?: string }>(res, 'Reset database');
   }
 };

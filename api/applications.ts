@@ -5,10 +5,10 @@ import { validateApplication } from '../lib/validation';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed.' });
-  const validation = validateApplication(req.body);
-  if (!validation.ok) return res.status(400).json({ success: false, error: validation.error });
 
   try {
+    const validation = validateApplication(req.body);
+    if (!validation.ok) return res.status(400).json({ success: false, error: validation.error });
     const application = {
       id: `application-${randomUUID()}`,
       ...validation.value,
@@ -30,6 +30,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!rows[0]) return res.status(503).json({ success: false, error: 'Shared database is not initialized. Run npm run migrate:neon.' });
     return res.status(201).json({ success: true, application });
   } catch (error) {
-    return sendApiError(res, error);
+    return sendApiError(res, error, 'POST /api/applications');
   }
 }

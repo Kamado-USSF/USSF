@@ -10,16 +10,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.setHeader('Cache-Control', 'no-store');
       return res.status(200).json({ success: true, assets: state.customAssets || [] });
     } catch (error) {
-      return sendApiError(res, error);
+      return sendApiError(res, error, 'GET /api/assets');
     }
   }
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed.' });
   if (!requireAdminToken(req, res)) return;
 
-  const validation = validateAsset(req.body);
-  if (!validation.ok) return res.status(400).json({ success: false, error: validation.error });
-
   try {
+    const validation = validateAsset(req.body);
+    if (!validation.ok) return res.status(400).json({ success: false, error: validation.error });
     const sql = await getSql();
     const rows = await sql`
       UPDATE ussf_app_state
@@ -39,6 +38,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!rows[0]) return res.status(409).json({ success: false, error: 'Asset ID already exists or the shared database is not initialized.' });
     return res.status(201).json({ success: true, assets: rows[0].assets });
   } catch (error) {
-    return sendApiError(res, error);
+    return sendApiError(res, error, 'POST /api/assets');
   }
 }

@@ -10,7 +10,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.setHeader('Cache-Control', 'no-store');
       return res.status(200).json({ success: true, groupInfo: state.groupInfo });
     } catch (error) {
-      return sendApiError(res, error);
+      return sendApiError(res, error, 'GET /api/group-info');
     }
   }
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed.' });
@@ -35,6 +35,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!rows[0]) return res.status(503).json({ success: false, error: 'Shared database is not initialized. Run npm run migrate:neon.' });
     return res.status(200).json({ success: true, groupInfo: rows[0].group_info });
   } catch (error) {
-    return sendApiError(res, error);
+    return sendApiError(res, error, 'POST /api/group-info');
   }
 }

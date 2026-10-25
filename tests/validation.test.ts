@@ -3,7 +3,9 @@ import test from 'node:test';
 import type { AccountLinkRequest } from '../src/data/ussfData';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { requireAdminToken } from '../lib/auth';
-import { getSql } from '../lib/db';
+import { getSql, type PersistentState } from '../lib/db';
+import { toPublicState } from '../lib/public-state';
+import { parseApiResponse } from '../src/services/api';
 import { findLinkRequestConflict, validateApplication, validateAsset, validateGroupInfo, validateLinkRequest } from '../lib/validation';
 
 const validLinkRequest = {
@@ -95,4 +97,54 @@ test('missing database configuration fails before loading the Neon driver', asyn
     if (previousUrl === undefined) delete process.env.DATABASE_URL;
     else process.env.DATABASE_URL = previousUrl;
   }
+});
+
+test('API parser reports plain-text and HTML failures without JSON syntax errors', async () => {
+  const textFailure = new Response('A server error has occurred\nFUNCTION_INVOCATION_FAILED\nrequest-id', {
+    status: 500,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+  });
+  await assert.rejects(
+    parseApiResponse(textFailure, 'Submit application'),
+    /HTTP 500 \(text\/plain; charset=utf-8\).*FUNCTION_INVOCATION_FAILED/
+  );
+
+  const htmlFailure = new Response('<html>Not found</html>', {
+    status: 404,
+    headers: { 'Content-Type': 'text/html' }
+  });
+  await assert.rejects(parseApiResponse(htmlFailure, 'Update group info'), /HTTP 404 \(text\/html\)/);
+});
+
+test('API parser preserves structured authorization errors', async () => {
+  const unauthorized = new Response(JSON.stringify({ success: false, error: 'Administrator token invalid.' }), {
+    status: 401,
+    headers: { 'Content-Type': 'application/json' }
+  });
+  await assert.rejects(parseApiResponse(unauthorized, 'Save asset'), /Administrator token invalid/);
+});
+
+test('public state excludes private queues and member financial/account data', () => {
+  const state = {
+    version: 1,
+    lastUpdated: '2026-10-25T00:00:00.000Z',
+    members: [{
+      id: 'member-1', cid: 'SF-100', name: 'Operator', rank: 'Recruit', rankLevel: 1,
+      totalPayout: 9000000, promotionPoints: 700, accountName: 'private-account'
+    }],
+    claims: [{ id: 'claim-1', amount: 1000 }],
+    linkRequests: [{ id: 'link-1', username: 'private-user' }],
+    applications: [{ id: 'app-1', applicantName: 'Private Applicant' }],
+    groupInfo: { name: 'USSF' },
+    customAssets: []
+  } as unknown as PersistentState;
+  const result = toPublicState(state) as Record<string, unknown>;
+  assert.equal('claims' in result, false);
+  assert.equal('linkRequests' in result, false);
+  assert.equal('applications' in result, false);
+  const [member] = result.members as Array<Record<string, unknown>>;
+  assert.equal(member.name, 'Operator');
+  assert.equal('totalPayout' in member, false);
+  assert.equal('promotionPoints' in member, false);
+  assert.equal('accountName' in member, false);
 });

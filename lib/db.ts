@@ -1,7 +1,31 @@
 export interface PersistentState {
   version: number;
   lastUpdated: string;
-  members: Array<{ cid?: string; accountName?: string }>;
+  members: Array<{
+    [key: string]: unknown;
+    id?: string;
+    cid?: string;
+    accountName?: string;
+    name?: string;
+    callsign?: string;
+    rank?: string;
+    rankLevel?: number;
+    rankCategory?: string;
+    division?: string;
+    joinedDate?: string;
+    status?: string;
+    presenceStatus?: string;
+    serviceRibbons?: string[];
+    avatarUrl?: string;
+    avatarFrame?: string;
+    namecard?: string;
+    nameStyle?: string;
+    bio?: string;
+    signature?: string;
+    customCursor?: string;
+    isMember?: boolean;
+    isApplicant?: boolean;
+  }>;
   linkRequests: Array<{
     id: string;
     username: string;
@@ -36,9 +60,17 @@ export async function readState() {
   return rows[0].state as PersistentState;
 }
 
-export function sendApiError(res: { status: (code: number) => { json: (body: unknown) => unknown }; json: (body: unknown) => unknown }, error: unknown) {
+export function sendApiError(
+  res: { status: (code: number) => { json: (body: unknown) => unknown }; json: (body: unknown) => unknown },
+  error: unknown,
+  operation: string
+) {
   const message = error instanceof Error ? error.message : 'Unexpected server error.';
   const status = message.includes('DATABASE_URL is not configured') || message.includes('database is not initialized') ? 503 : 500;
-  if (status === 500) console.error('[USSF API]', error);
+  if (status === 500) {
+    const errorName = error instanceof Error ? error.name : typeof error;
+    const errorCode = error && typeof error === 'object' && 'code' in error ? String(error.code) : undefined;
+    console.error('[USSF API]', { operation, errorName, errorCode });
+  }
   return res.status(status).json({ success: false, error: status === 500 ? 'Persistent storage request failed.' : message });
 }

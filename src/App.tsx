@@ -250,30 +250,41 @@ export default function App() {
   }, []);
 
   // Synchronize state with authoritative backend and poll for multi-user changes
+  const clientClaimsAdmin = Boolean(currentUser && currentUser.isMember && !currentUser.isApplicant && (
+    currentUser.isOwner || currentUser.isAdmin || (currentUser.specialRoles?.length || 0) > 0 ||
+    currentUser.rankCategory === 'High Command' || (currentUser.rankLevel || 0) >= 16
+  ));
   useEffect(() => {
     let isMounted = true;
+    let attemptedAdminRead = false;
     const syncState = async () => {
       try {
-        const state = await api.getState();
+        let state;
+        if (clientClaimsAdmin && (!attemptedAdminRead || api.hasAdminToken())) {
+          attemptedAdminRead = true;
+          state = await api.getAdminState();
+        } else {
+          state = await api.getState();
+        }
         if (!isMounted) return;
         if (state.members) setMembers(state.members);
-        if (state.claims) setClaims(state.claims);
-        if (state.fieldReports) setFieldReports(state.fieldReports);
-        if (state.promotionRequests) setPromotionRequests(state.promotionRequests);
-        if (state.applications) setApplications(state.applications);
-        if (state.linkRequests) setLinkRequests(state.linkRequests);
-        if (state.forgotPwRequests) setForgotPwRequests(state.forgotPwRequests);
+        if (clientClaimsAdmin && state.claims) setClaims(state.claims);
+        if (clientClaimsAdmin && state.fieldReports) setFieldReports(state.fieldReports);
+        if (clientClaimsAdmin && state.promotionRequests) setPromotionRequests(state.promotionRequests);
+        if (clientClaimsAdmin && state.applications) setApplications(state.applications);
+        if (clientClaimsAdmin && state.linkRequests) setLinkRequests(state.linkRequests);
+        if (clientClaimsAdmin && state.forgotPwRequests) setForgotPwRequests(state.forgotPwRequests);
         if (state.adminEvents) setAdminEvents(state.adminEvents);
         if (state.loginRewards) setLoginRewards(state.loginRewards);
-        if (state.pendingLoginClaims) setPendingLoginClaims(state.pendingLoginClaims);
+        if (clientClaimsAdmin && state.pendingLoginClaims) setPendingLoginClaims(state.pendingLoginClaims);
         if (state.groupInfo) setGroupInfo(state.groupInfo);
-        if (state.birthdayGifts) setBirthdayGifts(state.birthdayGifts);
-        if (state.squadGroups) setSquadGroups(state.squadGroups);
+        if (clientClaimsAdmin && state.birthdayGifts) setBirthdayGifts(state.birthdayGifts);
+        if (clientClaimsAdmin && state.squadGroups) setSquadGroups(state.squadGroups);
         if (state.achievements) setAchievements(state.achievements);
         if (state.customAssets) setCustomAssets(state.customAssets);
 
         // Keep current user updated with server data while preserving selected presence
-        setCurrentUser(prevUser => {
+        if (clientClaimsAdmin) setCurrentUser(prevUser => {
           if (!prevUser) return null;
           const fresh = (state.members || []).find(m => m.id === prevUser.id || m.cid === prevUser.cid);
           if (fresh) {
@@ -295,7 +306,7 @@ export default function App() {
       isMounted = false;
       clearInterval(pollInterval);
     };
-  }, []);
+  }, [currentUser?.id, clientClaimsAdmin]);
 
   // Save members and current user to localStorage for fallback
   useEffect(() => {

@@ -5,10 +5,10 @@ import { findLinkRequestConflict, validateLinkRequest } from '../lib/validation'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed.' });
-  const validation = validateLinkRequest(req.body);
-  if (!validation.ok) return res.status(400).json({ success: false, error: validation.error });
 
   try {
+    const validation = validateLinkRequest(req.body);
+    if (!validation.ok) return res.status(400).json({ success: false, error: validation.error });
     const state = await readState();
     const conflict = findLinkRequestConflict(state, validation.value.username, validation.value.inGameCid);
     if (conflict?.existing) return res.status(200).json({ success: true, request: conflict.existing });
@@ -48,6 +48,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!rows[0]) return res.status(409).json({ success: false, error: 'The account or CID became associated with another request. Refresh and verify the details.' });
     return res.status(201).json({ success: true, request });
   } catch (error) {
-    return sendApiError(res, error);
+    return sendApiError(res, error, 'POST /api/link-requests');
   }
 }
