@@ -2,6 +2,7 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import fs from 'fs';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 import { 
   INITIAL_MEMBERS, 
@@ -123,15 +124,9 @@ function loadDatabase(): AuthoritativeDatabase {
       }
       parsed.members = cleanedMembers;
 
-      // Ensure group specs are Level 4 with authentic Founders & Leaders
       parsed.groupInfo = {
         ...USSF_GROUP_INFO,
-        ...(parsed.groupInfo || {}),
-        level: 'L4',
-        founder: 'HCMD-OneManArmy#USSF',
-        coFounder: 'HCMD-Meliodas#USSF',
-        commander: 'SCMD-Caminade#USSF',
-        leaders: 'SCMD-Caminade#USSF, SLT-Kamado#USSF'
+        ...(parsed.groupInfo || {})
       };
 
       // Ensure exact reward catalog
@@ -412,13 +407,23 @@ async function startServer() {
   // 6. Recruitment Applications
   app.post('/api/applications', (req, res) => {
     try {
-      const appItem: RecruitmentApplication = req.body;
-      if (!appItem || !appItem.id || !appItem.applicantName) {
+      const submitted = req.body as Partial<RecruitmentApplication>;
+      const applicantName = String(submitted?.applicantName || '').trim();
+      if (!applicantName || submitted?.rulesAccepted !== true) {
         return res.status(400).json({ success: false, error: 'Applicant name required.' });
       }
+      const appItem: RecruitmentApplication = {
+        ...submitted,
+        id: `application-${randomUUID()}`,
+        applicantName,
+        date: new Date().toISOString().split('T')[0],
+        status: 'Pending Review'
+      } as RecruitmentApplication;
       db = loadDatabase();
       db.applications.unshift(appItem);
-      saveDatabase(db);
+      if (!saveDatabase(db)) {
+        return res.status(500).json({ success: false, error: 'Could not persist the enlistment application.' });
+      }
       res.json({ success: true, application: appItem });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err?.message });
@@ -478,16 +483,121 @@ async function startServer() {
     }
   });
 
+  // Account-link requests are public submissions; approval remains an admin-only operation.
+  app.post('/api/link-requests', (req, res) => {
+    try {
+      const submitted = req.body as Partial<AccountLinkRequest>;
+      const username = String(submitted?.username || '').trim();
+      const inGameName = String(submitted?.inGameName || '').trim();
+      const inGameCid = String(submitted?.inGameCid || '').trim();
+      const ingameRank = String(submitted?.ingameRank || '').trim();
+      const f5ScreenshotUrl = String(submitted?.f5ScreenshotUrl || '').trim();
+      if (!username || !inGameName || !inGameCid || !ingameRank || !f5ScreenshotUrl) {
+        return res.status(400).json({ success: false, error: 'Website username, in-game name, CID, rank, and proof URL are required.' });
+      }
+      if (username.length > 100 || inGameName.length > 100 || inGameCid.length > 80 || ingameRank.length > 100 || f5ScreenshotUrl.length > 2048) {
+        return res.status(400).json({ success: false, error: 'One or more account-link fields exceed the allowed length.' });
+      }
+      let proofUrl: URL;
+      try {
+        proofUrl = new URL(f5ScreenshotUrl);
+      } catch {
+        return res.status(400).json({ success: false, error: 'Proof must be a valid HTTP or HTTPS URL.' });
+      }
+      if (proofUrl.protocol !== 'http:' && proofUrl.protocol !== 'https:') {
+        return res.status(400).json({ success: false, error: 'Proof must be a valid HTTP or HTTPS URL.' });
+      }
+
+      db = loadDatabase();
+      db.linkRequests ||= [];
+      const normalizedUsername = username.toLowerCase();
+      const normalizedCid = inGameCid.toLowerCase();
+      const pendingForAccount = db.linkRequests.find(request =>
+        request.status === 'Pending' && request.username.trim().toLowerCase() === normalizedUsername
+      );
+      if (pendingForAccount) {
+        if (pendingForAccount.inGameCid.trim().toLowerCase() === normalizedCid) {
+          return res.json({ success: true, request: pendingForAccount });
+        }
+        return res.status(409).json({ success: false, error: 'This website account already has a pending account-link request.' });
+      }
+
+      const pendingForCid = db.linkRequests.find(request =>
+        request.status === 'Pending' && request.inGameCid.trim().toLowerCase() === normalizedCid
+      );
+      if (pendingForCid && pendingForCid.username.trim().toLowerCase() !== normalizedUsername) {
+        return res.status(409).json({ success: false, error: 'This CID already has a pending request for a different website account.' });
+      }
+
+      const membersWithCid = db.members.filter(member => member.cid.trim().toLowerCase() === normalizedCid);
+      if (membersWithCid.length > 1) {
+        return res.status(409).json({ success: false, error: 'This CID matches multiple roster records and requires administrative recovery.' });
+      }
+      const rosterMember = membersWithCid[0];
+      if (rosterMember) {
+        if (!rosterMember.accountName) {
+          return res.status(409).json({ success: false, error: 'This CID is already on the roster without a verified website-account mapping and requires administrative recovery.' });
+        }
+        if (rosterMember.accountName.trim().toLowerCase() !== normalizedUsername) {
+          return res.status(409).json({ success: false, error: 'This CID is already associated with a different website account.' });
+        }
+        return res.status(409).json({ success: false, error: 'This CID is already associated with this website account.' });
+      }
+      const accountAlreadyLinked = db.members.find(member =>
+        member.accountName?.trim().toLowerCase() === normalizedUsername && member.cid.trim().toLowerCase() !== normalizedCid
+      );
+      if (accountAlreadyLinked) {
+        return res.status(409).json({ success: false, error: 'This website account is already associated with a different CID.' });
+      }
+
+      const linkRequest: AccountLinkRequest = {
+        id: `link-${randomUUID()}`,
+        username,
+        inGameName,
+        inGameCid,
+        ingameRank,
+        f5ScreenshotUrl,
+        submissionDate: new Date().toISOString(),
+        status: 'Pending',
+        adminNote: 'Submitted via official account linking portal.'
+      };
+      db.linkRequests.unshift(linkRequest);
+      if (!saveDatabase(db)) {
+        return res.status(500).json({ success: false, error: 'Could not persist the account-link request.' });
+      }
+      return res.status(201).json({ success: true, request: linkRequest });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message || 'Server error submitting account-link request.' });
+    }
+  });
+
   // 7. Group Info & Announcements
   app.post('/api/group-info', (req, res) => {
     try {
       const info = req.body;
+      if (!info || typeof info !== 'object' || Array.isArray(info)) {
+        return res.status(400).json({ success: false, error: 'Group specification updates must be a JSON object.' });
+      }
+      const editableFields = [
+        'name', 'level', 'founder', 'coFounder', 'commander', 'leaders', 'motto',
+        'activeSince', 'tagUsage', 'commandCenters', 'skinsAvailable', 'carShadersAvailable'
+      ] as const;
+      const updates = Object.fromEntries(
+        editableFields
+          .filter(field => Object.prototype.hasOwnProperty.call(info, field))
+          .map(field => [field, info[field]])
+      );
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ success: false, error: 'No editable group specification fields were provided.' });
+      }
       db = loadDatabase();
-      db.groupInfo = { ...db.groupInfo, ...info };
-      saveDatabase(db);
-      res.json({ success: true, groupInfo: db.groupInfo });
+      db.groupInfo = { ...db.groupInfo, ...updates };
+      if (!saveDatabase(db)) {
+        return res.status(500).json({ success: false, error: 'Could not persist group specifications.' });
+      }
+      return res.json({ success: true, groupInfo: db.groupInfo });
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err?.message });
+      return res.status(500).json({ success: false, error: err?.message || 'Server error updating group specifications.' });
     }
   });
 
@@ -566,8 +676,12 @@ async function startServer() {
     }
   });
 
+  app.use('/api', (req, res) => {
+    res.status(404).json({ success: false, error: `API endpoint not found: ${req.method} ${req.path}` });
+  });
+
   // ===================== FRONTEND SERVING =====================
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === 'production' || process.env.npm_lifecycle_event === 'preview') {
     app.use(express.static(path.resolve(__dirname, 'dist')));
     app.get('*', (req, res) => {
       res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));

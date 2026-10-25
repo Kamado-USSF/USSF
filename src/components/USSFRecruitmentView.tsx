@@ -11,8 +11,8 @@ import { USSFLogo } from './USSFLogo';
 interface USSFRecruitmentViewProps {
   applications: RecruitmentApplication[];
   linkRequests: AccountLinkRequest[];
-  onSubmitApplication: (app: RecruitmentApplication) => void;
-  onSubmitLinkRequest: (req: AccountLinkRequest) => void;
+  onSubmitApplication: (app: RecruitmentApplication) => Promise<void>;
+  onSubmitLinkRequest: (req: AccountLinkRequest) => Promise<void>;
 }
 
 export const USSFRecruitmentView: React.FC<USSFRecruitmentViewProps> = ({
@@ -59,6 +59,8 @@ export const USSFRecruitmentView: React.FC<USSFRecruitmentViewProps> = ({
 
   const [submittedApp, setSubmittedApp] = useState(false);
   const [submittedLink, setSubmittedLink] = useState(false);
+  const [isSubmittingApp, setIsSubmittingApp] = useState(false);
+  const [isSubmittingLink, setIsSubmittingLink] = useState(false);
   const [copiedFormat, setCopiedFormat] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -80,7 +82,7 @@ export const USSFRecruitmentView: React.FC<USSFRecruitmentViewProps> = ({
     "You should be able to control yourself and demonstrate professionalism."
   ];
 
-  const handleApplicationSubmit = (e: React.FormEvent) => {
+  const handleApplicationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agreeA1 || !agreeA2 || !agreeA3 || !agreeA4) {
       setFormError("You must agree to all 4 USSF Agreements (A1, A2, A3, A4) to submit your application.");
@@ -103,11 +105,18 @@ export const USSFRecruitmentView: React.FC<USSFRecruitmentViewProps> = ({
       status: 'Pending Review'
     };
 
-    onSubmitApplication(newApp);
-    setSubmittedApp(true);
+    setIsSubmittingApp(true);
+    try {
+      await onSubmitApplication(newApp);
+      setSubmittedApp(true);
+    } catch (err: any) {
+      setFormError(err?.message || 'Failed to submit enlistment application.');
+    } finally {
+      setIsSubmittingApp(false);
+    }
   };
 
-  const handleLinkSubmit = (e: React.FormEvent) => {
+  const handleLinkSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!linkUsername || !linkInGameName || !linkScreenshotUrl) return;
 
@@ -125,8 +134,16 @@ export const USSFRecruitmentView: React.FC<USSFRecruitmentViewProps> = ({
       adminNote: 'Submitted via official account linking portal.'
     };
 
-    onSubmitLinkRequest(newLink);
-    setSubmittedLink(true);
+    setIsSubmittingLink(true);
+    setFormError(null);
+    try {
+      await onSubmitLinkRequest(newLink);
+      setSubmittedLink(true);
+    } catch (err: any) {
+      setFormError(err?.message || 'Failed to submit account-link request.');
+    } finally {
+      setIsSubmittingLink(false);
+    }
   };
 
   const copyApplicationTemplate = () => {
@@ -584,9 +601,10 @@ Stats: ${statsInfo || ''}`;
                   </div>
                   <button
                     type="submit"
+                    disabled={isSubmittingApp}
                     className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-tactical font-black text-sm uppercase tracking-wider transition-all cursor-pointer shadow-xl shadow-amber-500/20"
                   >
-                    SUBMIT APPLICATION FOR REVIEW
+                    {isSubmittingApp ? 'SUBMITTING...' : 'SUBMIT APPLICATION FOR REVIEW'}
                   </button>
                 </div>
               </form>
@@ -738,11 +756,13 @@ Stats: ${statsInfo || ''}`;
                 </div>
 
                 <div className="pt-2 flex justify-end">
+                  {formError && <p role="alert" className="mr-auto text-xs text-rose-400">{formError}</p>}
                   <button
                     type="submit"
+                    disabled={isSubmittingLink}
                     className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-tactical font-black text-xs uppercase cursor-pointer"
                   >
-                    DISPATCH LINK REQUEST
+                    {isSubmittingLink ? 'SUBMITTING...' : 'DISPATCH LINK REQUEST'}
                   </button>
                 </div>
               </form>

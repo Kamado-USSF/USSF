@@ -43,17 +43,35 @@ export interface AuthoritativeSystemState {
   customAssets: USSFAssetItem[];
 }
 
+interface ApiResponse {
+  success?: boolean;
+  error?: string;
+}
+
+async function parseApiResponse<T extends ApiResponse>(res: Response, action: string): Promise<T> {
+  const contentType = res.headers.get('content-type') || 'unknown content type';
+  const rawBody = await res.text();
+  let json: T;
+
+  try {
+    json = JSON.parse(rawBody) as T;
+  } catch {
+    const excerpt = rawBody.trim().replace(/\s+/g, ' ').slice(0, 240);
+    throw new Error(`${action} failed: HTTP ${res.status} (${contentType})${excerpt ? `: ${excerpt}` : ''}`);
+  }
+
+  if (!res.ok || json.success === false) {
+    throw new Error(json.error || `${action} failed: HTTP ${res.status}`);
+  }
+  return json;
+}
+
 export const api = {
   // 1. Fetch entire authoritative database state
   async getState(): Promise<AuthoritativeSystemState> {
     const res = await fetch('/api/state');
-    if (!res.ok) {
-      throw new Error(`Failed to fetch state: HTTP ${res.status}`);
-    }
-    const json = await res.json();
-    if (!json.success || !json.data) {
-      throw new Error(json.error || 'Invalid response from server');
-    }
+    const json = await parseApiResponse<{ success: boolean; data?: AuthoritativeSystemState; error?: string }>(res, 'Fetch state');
+    if (!json.data) throw new Error('Fetch state failed: response did not include authoritative data.');
     return json.data;
   },
 
@@ -193,10 +211,8 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(application)
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || 'Failed to submit enlistment application');
-    }
+    const json = await parseApiResponse<{ success: boolean; application?: RecruitmentApplication; error?: string }>(res, 'Submit enlistment application');
+    if (!json.application) throw new Error('Submit enlistment application failed: response did not include the saved application.');
     return json.application;
   },
 
@@ -213,17 +229,26 @@ export const api = {
     return json.application;
   },
 
+  async submitLinkRequest(request: AccountLinkRequest): Promise<AccountLinkRequest> {
+    const res = await fetch('/api/link-requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request)
+    });
+    const json = await parseApiResponse<{ success: boolean; request?: AccountLinkRequest; error?: string }>(res, 'Submit account-link request');
+    if (!json.request) throw new Error('Submit account-link request failed: response did not include the saved request.');
+    return json.request;
+  },
+
   // 7. Group Info
-  async updateGroupInfo(info: any): Promise<any> {
+  async updateGroupInfo(info: Partial<typeof USSF_GROUP_INFO>): Promise<typeof USSF_GROUP_INFO> {
     const res = await fetch('/api/group-info', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(info)
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || 'Failed to update group settings');
-    }
+    const json = await parseApiResponse<{ success: boolean; groupInfo?: typeof USSF_GROUP_INFO; error?: string }>(res, 'Update group specifications');
+    if (!json.groupInfo) throw new Error('Update group specifications failed: response did not include the saved values.');
     return json.groupInfo;
   },
 

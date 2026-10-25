@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
-  ShieldAlert, Calendar, Gift, Users, FileDown, CheckCircle2, 
+  ShieldAlert, Calendar, Gift, Users, UserPlus, FileDown, CheckCircle2,
   XCircle, AlertTriangle, Activity, Settings, Plus, Flame, Clock, 
   Key, Link2, Database, BarChart3, Bell, Eye, Download, Printer, DollarSign,
   Crown, Trash2, Edit3, Save, ShieldCheck, Award, Lock, Sparkles, BookOpen, AlertCircle,
@@ -39,6 +39,7 @@ export interface AdminAuditEntry {
 
 interface USSFAdminViewProps {
   currentUser?: USSFMember | null;
+  applications?: RecruitmentApplication[];
   events?: AdminEvent[];
   onAddEvent: (event: AdminEvent) => void;
   forgotPwRequests?: ForgotPasswordRequest[];
@@ -58,7 +59,7 @@ interface USSFAdminViewProps {
   pendingLoginClaims?: PendingLoginRewardClaim[];
   onApproveLoginClaim: (id: string) => void;
   groupInfo?: typeof USSF_GROUP_INFO;
-  onUpdateGroupInfo?: (updated: Partial<typeof USSF_GROUP_INFO>) => void;
+  onUpdateGroupInfo?: (updated: Partial<typeof USSF_GROUP_INFO>) => Promise<void>;
   ranks?: typeof USSF_RANKS;
   onUpdateRanks?: (ranks: typeof USSF_RANKS) => void;
   assets?: USSFAssetItem[];
@@ -75,6 +76,7 @@ interface USSFAdminViewProps {
 
 export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
   currentUser,
+  applications = [],
   events = [],
   onAddEvent,
   forgotPwRequests = [],
@@ -109,7 +111,7 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
   onUpdateFieldReports
 }) => {
   const [activeSection, setActiveSection] = useState<
-    'events' | 'rosterMgmt' | 'promotionsQueue' | 'pageInfo' | 'payoutQueue' | 'daily' | 'passwords' | 'links' | 'moderation' | 'logs'
+    'events' | 'rosterMgmt' | 'promotionsQueue' | 'applications' | 'pageInfo' | 'payoutQueue' | 'daily' | 'passwords' | 'links' | 'moderation' | 'logs'
   >('events');
 
   // Event Creator State (Multipliers: 2X, 3X, 4X Financial & Promotions; 3X APB removed, multiplier factor removed)
@@ -150,6 +152,28 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
     bioText: `Special Forces was established on June 30, 2019. We are a police force group. We care about CIT and the community and bring benefits as possible. USSF is always active in the field of arresting criminals in any form of crime.`
   });
   const [pageInfoSaved, setPageInfoSaved] = useState(false);
+  const [pageInfoError, setPageInfoError] = useState<string | null>(null);
+  const [isSavingPageInfo, setIsSavingPageInfo] = useState(false);
+
+  const groupSkins = groupInfo.skinsAvailable?.join(', ') || '39, 164, 267, 285, 286, 287, 266, 1017, 1016, 1007, 1057';
+  const groupCarShaders = groupInfo.carShadersAvailable?.join(', ') || 'Sultan, Burrito, Banshee, Hydra, Hummer';
+  useEffect(() => {
+    setEditableGroupInfo(current => ({
+      ...current,
+      name: groupInfo.name || 'Special Forces',
+      level: groupInfo.level || 'L4',
+      founder: groupInfo.founder || 'HCMD-OneManArmy#USSF',
+      coFounder: groupInfo.coFounder || 'HCMD-Meliodas#USSF',
+      commander: groupInfo.commander || 'SCMD-Caminade#USSF',
+      leaders: groupInfo.leaders || 'SCMD-Caminade#USSF, SLT-Kamado#USSF',
+      motto: groupInfo.motto || "May God Have Mercy Upon Our Enemies Cause We Won't",
+      activeSince: groupInfo.activeSince || '2019-06-30',
+      tagUsage: groupInfo.tagUsage || 'RANK-Name#USSF',
+      commandCenters: groupInfo.commandCenters || 'N/A',
+      skins: groupSkins,
+      carShaders: groupCarShaders
+    }));
+  }, [groupInfo.name, groupInfo.level, groupInfo.founder, groupInfo.coFounder, groupInfo.commander, groupInfo.leaders, groupInfo.motto, groupInfo.activeSince, groupInfo.tagUsage, groupInfo.commandCenters, groupSkins, groupCarShaders]);
 
   // Promotion Pages & Ranks Requirements Editor State
   const [editableRanksList, setEditableRanksList] = useState(ranks);
@@ -459,12 +483,15 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
   };
 
   // Page Info Save Handler
-  const handleSavePageInfo = (e: React.FormEvent) => {
+  const handleSavePageInfo = async (e: React.FormEvent) => {
     e.preventDefault();
     tacticalAudio.playTargetLock();
 
-    if (onUpdateGroupInfo) {
-      onUpdateGroupInfo({
+    if (!onUpdateGroupInfo || isSavingPageInfo) return;
+    setPageInfoError(null);
+    setIsSavingPageInfo(true);
+    try {
+      await onUpdateGroupInfo({
         name: editableGroupInfo.name,
         level: editableGroupInfo.level,
         founder: editableGroupInfo.founder,
@@ -478,10 +505,13 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
         skinsAvailable: editableGroupInfo.skins.split(',').map(s => s.trim()).filter(Boolean),
         carShadersAvailable: editableGroupInfo.carShaders.split(',').map(s => s.trim()).filter(Boolean)
       });
+      setPageInfoSaved(true);
+      setTimeout(() => setPageInfoSaved(false), 4000);
+    } catch (err: any) {
+      setPageInfoError(err?.message || 'Failed to save group specifications.');
+    } finally {
+      setIsSavingPageInfo(false);
     }
-
-    setPageInfoSaved(true);
-    setTimeout(() => setPageInfoSaved(false), 4000);
   };
 
   const pendingDisbursements = pendingLoginClaims.filter(c => c.status === 'Pending Payout');
@@ -548,6 +578,7 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
             { id: 'events', label: '2X/3X/4X Campaign Creator', icon: Flame, count: events.length },
             { id: 'rosterMgmt', label: 'Roster & Rank Management', icon: Users, count: members.length },
             { id: 'promotionsQueue', label: 'Promotion Requests', icon: Award, count: pendingPromotions.length },
+            { id: 'applications', label: 'Enlistment Applications', icon: UserPlus, count: applications.filter(application => application.status === 'Pending Review').length },
             { id: 'pageInfo', label: 'Edit Page Content & Specs', icon: Edit3, count: 0 },
             { id: 'payoutQueue', label: 'Login Cash Payouts', icon: DollarSign, count: pendingDisbursements.length },
             { id: 'daily', label: '7 & 30 Days Login Event', icon: Gift, count: loginRewards.length },
@@ -584,6 +615,41 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
             );
           })}
         </div>
+
+        {activeSection === 'applications' && (
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/80 p-5 space-y-4">
+            <div className="border-b border-neutral-800 pb-3">
+              <h3 className="text-sm font-tactical font-bold uppercase text-neutral-100 flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-amber-400" />
+                <span>ENLISTMENT APPLICATION REVIEW QUEUE</span>
+              </h3>
+            </div>
+            {applications.length === 0 ? (
+              <p className="py-6 text-center text-xs text-neutral-500">No enlistment applications have been submitted.</p>
+            ) : (
+              <div className="space-y-3">
+                {applications.map(application => (
+                  <div key={application.id} className="rounded-lg border border-neutral-800 bg-neutral-950/80 p-4 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-sm font-bold text-neutral-100">{application.applicantName}</div>
+                      <span className={`text-[10px] font-data font-bold uppercase ${application.status === 'Pending Review' ? 'text-amber-300' : application.status === 'Accepted' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {application.status}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-neutral-400">
+                      <span>Account: {application.discordTag || 'Not provided'}</span>
+                      <span>Age: {application.age} | Playtime: {application.playtimeHours}h</span>
+                      <span>Submitted: {application.date}</span>
+                    </div>
+                    <p className="text-xs text-neutral-300 whitespace-pre-wrap">{application.lawExperience}</p>
+                    {application.reviewerNotes && <p className="text-xs text-neutral-400">Review notes: {application.reviewerNotes}</p>}
+                    <p className="text-[10px] text-neutral-600 font-mono">Request ID: {application.id}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* SECTION 1: ROSTER & RANK MANAGEMENT (Edit Ranks, Delete Member, Web Owner Role) */}
         {activeSection === 'rosterMgmt' && (
@@ -1035,13 +1101,15 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-2">
+                <div className="flex items-center justify-between gap-3 pt-2">
+                  {pageInfoError && <p role="alert" className="text-xs text-rose-400">{pageInfoError}</p>}
                   <button
                     type="submit"
+                    disabled={isSavingPageInfo}
                     className="px-6 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-tactical font-black text-xs uppercase cursor-pointer shadow-lg flex items-center gap-2"
                   >
                     <Save className="h-4 w-4" />
-                    <span>SAVE & PUBLISH PAGE SPECIFICATIONS</span>
+                    <span>{isSavingPageInfo ? 'SAVING...' : 'SAVE & PUBLISH PAGE SPECIFICATIONS'}</span>
                   </button>
                 </div>
               </form>
@@ -1971,6 +2039,10 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
               </h3>
             </div>
 
+            <p role="status" className="border border-amber-700/60 bg-amber-950/30 p-3 text-xs text-amber-200">
+              Requests are visible, but review actions are unavailable until the server can authenticate administrators.
+            </p>
+
             <div className="space-y-3">
               {linkRequests.map(req => (
                 <div key={req.id} className="p-4 rounded-xl border border-neutral-800 bg-neutral-950/80 space-y-3">
@@ -2004,15 +2076,19 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => onResolveLinkRequest(req.id, false)}
+                          disabled
+                          title="Server-authenticated administrative review is not configured"
                           className="px-3 py-1 rounded bg-rose-950 text-rose-300 text-xs font-tactical font-bold uppercase hover:bg-rose-900 cursor-pointer"
                         >
-                          DENY
+                          DENY (UNAVAILABLE)
                         </button>
                         <button
                           onClick={() => onResolveLinkRequest(req.id, true)}
+                          disabled
+                          title="Server-authenticated administrative review is not configured"
                           className="px-3 py-1 rounded bg-emerald-500 hover:bg-emerald-400 text-neutral-950 text-xs font-tactical font-bold uppercase cursor-pointer"
                         >
-                          APPROVE & ADD TO ROSTER
+                          APPROVE (UNAVAILABLE)
                         </button>
                       </div>
                     ) : (

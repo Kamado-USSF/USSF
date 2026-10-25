@@ -677,17 +677,14 @@ export default function App() {
   };
 
   const handleAddRecruitmentApp = async (app: RecruitmentApplication) => {
-    try {
-      const saved = await api.submitApplication(app);
-      setApplications(prev => [saved, ...prev.filter(a => a.id !== saved.id)]);
-      showToast('Enlistment application submitted to High Command and saved to authoritative database.');
-    } catch (err: any) {
-      showToast(`Error submitting application: ${err?.message}`);
-    }
+    const saved = await api.submitApplication(app);
+    setApplications(prev => [saved, ...prev.filter(a => a.id !== saved.id)]);
+    showToast('Enlistment application submitted to High Command and saved to authoritative database.');
   };
 
-  const handleAddLinkRequest = (req: AccountLinkRequest) => {
-    setLinkRequests([req, ...linkRequests]);
+  const handleAddLinkRequest = async (req: AccountLinkRequest) => {
+    const saved = await api.submitLinkRequest(req);
+    setLinkRequests(prev => [saved, ...prev.filter(item => item.id !== saved.id)]);
     showToast('In-game account linking request sent to Admin review queue.');
   };
 
@@ -701,64 +698,8 @@ export default function App() {
     showToast(approved ? 'Password reset token approved & issued.' : 'Request dismissed.');
   };
 
-  const handleResolveLinkRequest = (id: string, approved: boolean) => {
-    const target = linkRequests.find(r => r.id === id);
-    if (!target) return;
-
-    setLinkRequests(linkRequests.map(r => r.id === id ? { ...r, status: approved ? 'Approved' : 'Rejected' } : r));
-
-    if (approved) {
-      // Find rank definition corresponding to requested ingameRank or default to Recruit
-      const rankDef = USSF_RANKS.find(r => r.name.toLowerCase() === (target.ingameRank || '').toLowerCase()) || USSF_RANKS[0];
-      const newMember: USSFMember = {
-        id: `mem-${Date.now()}`,
-        cid: target.inGameCid,
-        name: target.inGameName,
-        callsign: 'Special-Forces-Operator',
-        rank: rankDef.name,
-        rankLevel: rankDef.level,
-        rankCategory: rankDef.category as any,
-        division: 'CIT2 Special Forces Patrol Guard',
-        joinedDate: new Date().toISOString().split('T')[0],
-        status: 'Active Duty',
-        promotionPoints: 0, // Clean production state: zero fabricated points
-        totalPayout: 0,     // Clean production state: zero fake payouts
-        arrestCount: 0,
-        patrolHours: 0,
-        playtimeHours: 0,
-        serviceRibbons: [],
-        avatarUrl: '/src/assets/images/special_forces_unit_1790346782492.jpg',
-        avatarFrame: 'Recruit Ring',
-        namecard: 'Special Forces Operator',
-        nameStyle: 'standard',
-        bio: 'In-game verified Special Forces operator.',
-        signature: 'Ready for duty.',
-        customCursor: 'crosshair-laser',
-        linkedInGame: true,
-        isMember: true,
-        isApplicant: false
-      };
-      setMembers([...members, newMember]);
-
-      // If current user is the account linking applicant, update their session directly to active member
-      if (currentUser && (
-        currentUser.name?.toLowerCase() === target.submittedBy?.toLowerCase() ||
-        currentUser.accountName?.toLowerCase() === target.accountName?.toLowerCase() ||
-        currentUser.name?.toLowerCase() === target.inGameName?.toLowerCase()
-      )) {
-        const updatedCurrent: USSFMember = {
-          ...currentUser,
-          ...newMember,
-          id: currentUser.id
-        };
-        setCurrentUser(updatedCurrent);
-        localStorage.setItem('ussf_logged_user', JSON.stringify(updatedCurrent));
-      }
-
-      showToast(`Approved ${target.inGameName} (${target.inGameCid}) — Commissioned to Official Roster as ${rankDef.name}!`);
-    } else {
-      showToast('Account linking request denied.');
-    }
+  const handleResolveLinkRequest = (_id: string, approved: boolean) => {
+    showToast(`Account-link ${approved ? 'approval' : 'rejection'} was not applied. Server-authenticated administrative review is not configured.`);
   };
 
   // Daily Bonus claiming sends claim to Admin Section for monetary payout approval
@@ -1021,6 +962,7 @@ export default function App() {
       showToast('Group specifications saved and published globally.');
     } catch (err: any) {
       showToast(`Error updating group specs: ${err?.message}`);
+      throw err;
     }
   };
 
@@ -1266,6 +1208,7 @@ export default function App() {
                 {isUserAdmin ? (
                   <USSFAdminView
                     currentUser={currentUser}
+                    applications={applications}
                     events={adminEvents}
                     onAddEvent={(e) => {
                       setAdminEvents([e, ...adminEvents]);
