@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { AccountLinkRequest } from '../src/data/ussfData';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { requireAdminToken } from '../lib/auth';
+import { getSql } from '../lib/db';
 import { findLinkRequestConflict, validateApplication, validateAsset, validateGroupInfo, validateLinkRequest } from '../lib/validation';
 
 const validLinkRequest = {
@@ -51,4 +54,45 @@ test('group specification validation only accepts known fields and correctly typ
   });
   assert.equal(validateGroupInfo({ unknownField: 'ignored' }).ok, false);
   assert.equal(validateGroupInfo({ skinsAvailable: '39, 164' }).ok, false);
+});
+
+test('admin token check fails closed for missing and invalid credentials', () => {
+  const previousToken = process.env.USSF_ADMIN_API_TOKEN;
+  const responseState: { status?: number; body?: unknown } = {};
+  const response = {
+    status(status: number) {
+      responseState.status = status;
+      return this;
+    },
+    json(body: unknown) {
+      responseState.body = body;
+      return this;
+    }
+  } as unknown as VercelResponse;
+  const request = (authorization?: string) => ({ headers: { authorization } }) as unknown as VercelRequest;
+  try {
+    delete process.env.USSF_ADMIN_API_TOKEN;
+    assert.equal(requireAdminToken(request(), response), false);
+    assert.equal(responseState.status, 503);
+
+    process.env.USSF_ADMIN_API_TOKEN = 'A'.repeat(32);
+    assert.equal(requireAdminToken(request('Bearer incorrect-token'), response), false);
+    assert.equal(responseState.status, 401);
+
+    assert.equal(requireAdminToken(request(`Bearer ${'A'.repeat(32)}`), response), true);
+  } finally {
+    if (previousToken === undefined) delete process.env.USSF_ADMIN_API_TOKEN;
+    else process.env.USSF_ADMIN_API_TOKEN = previousToken;
+  }
+});
+
+test('missing database configuration fails before loading the Neon driver', async () => {
+  const previousUrl = process.env.DATABASE_URL;
+  try {
+    delete process.env.DATABASE_URL;
+    await assert.rejects(getSql(), /DATABASE_URL is not configured/);
+  } finally {
+    if (previousUrl === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = previousUrl;
+  }
 });

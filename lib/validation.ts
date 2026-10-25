@@ -1,8 +1,10 @@
-import { USSF_GROUP_INFO, type AccountLinkRequest, type RecruitmentApplication, type USSFAssetItem } from '../src/data/ussfData';
+import type { AccountLinkRequest, RecruitmentApplication, USSFAssetItem } from '../src/data/ussfData';
+
+type GroupInfo = typeof import('../src/data/ussfData').USSF_GROUP_INFO;
 
 export type ValidationResult<T> = { ok: true; value: T } | { ok: false; error: string };
 
-export function validateGroupInfo(input: unknown): ValidationResult<Partial<typeof USSF_GROUP_INFO>> {
+export function validateGroupInfo(input: unknown): ValidationResult<Partial<GroupInfo>> {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     return { ok: false, error: 'Group specification updates must be a JSON object.' };
   }
@@ -30,7 +32,7 @@ export function validateGroupInfo(input: unknown): ValidationResult<Partial<type
   if (Object.keys(updates).length === 0) {
     return { ok: false, error: 'No editable group specification fields were provided.' };
   }
-  return { ok: true, value: updates as Partial<typeof USSF_GROUP_INFO> };
+  return { ok: true, value: updates as Partial<GroupInfo> };
 }
 
 export function validateLinkRequest(input: unknown): ValidationResult<Omit<AccountLinkRequest, 'id' | 'submissionDate' | 'status'>> {

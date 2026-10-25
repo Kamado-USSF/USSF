@@ -1,5 +1,3 @@
-import { neon } from '@neondatabase/serverless';
-
 export interface PersistentState {
   version: number;
   lastUpdated: string;
@@ -22,14 +20,15 @@ export interface PersistentState {
   [key: string]: unknown;
 }
 
-export function getSql() {
+export async function getSql() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) throw new Error('DATABASE_URL is not configured for this Vercel environment.');
+  const { neon } = await import('@neondatabase/serverless');
   return neon(connectionString);
 }
 
 export async function readState() {
-  const sql = getSql();
+  const sql = await getSql();
   const rows = await sql`SELECT state FROM ussf_app_state WHERE id = 1`;
   if (!rows[0]?.state) {
     throw new Error('Shared database is not initialized. Run npm run migrate:neon with DATABASE_URL.');

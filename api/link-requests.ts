@@ -21,7 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       status: 'Pending' as const,
       adminNote: 'Submitted via official account linking portal.'
     };
-    const sql = getSql();
+    const sql = await getSql();
     const rows = await sql`
       UPDATE ussf_app_state
       SET state = jsonb_set(

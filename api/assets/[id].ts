@@ -10,7 +10,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!requireAdminToken(req, res)) return;
 
   try {
-    const sql = getSql();
+    const sql = await getSql();
     if (req.method === 'DELETE') {
       const rows = await sql`
         UPDATE ussf_app_state
