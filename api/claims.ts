@@ -20,7 +20,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const claimantName = typeof body.claimantName === 'string' ? body.claimantName.trim() : '';
   const claimantCid = typeof body.claimantCid === 'string' ? body.claimantCid.trim() : '';
   const amount = Number(body.amount);
-  const date = typeof body.date === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(body.date) ? body.date : '';
+  const date = typeof body.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.date) ? body.date : '';
   const proofUrl = typeof body.proofUrl === 'string' ? body.proofUrl.trim() : '';
 
   if (!rewardTitle || rewardTitle.length > 200 || !rewardCategory || rewardCategory.length > 100 ||
