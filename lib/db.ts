@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export interface PersistentState {
   version: number;
   lastUpdated: string;
@@ -63,14 +65,19 @@ export async function readState() {
 export function sendApiError(
   res: { status: (code: number) => { json: (body: unknown) => unknown }; json: (body: unknown) => unknown },
   error: unknown,
-  operation: string
+  operation: string,
+  requestId = randomUUID()
 ) {
   const message = error instanceof Error ? error.message : 'Unexpected server error.';
   const status = message.includes('DATABASE_URL is not configured') || message.includes('database is not initialized') ? 503 : 500;
   if (status === 500) {
     const errorName = error instanceof Error ? error.name : typeof error;
     const errorCode = error && typeof error === 'object' && 'code' in error ? String(error.code) : undefined;
-    console.error('[USSF API]', { operation, errorName, errorCode });
+    console.error('[USSF API]', { operation, requestId, errorName, errorCode });
   }
-  return res.status(status).json({ success: false, error: status === 500 ? 'Persistent storage request failed.' : message });
+  return res.status(status).json({
+    success: false,
+    error: status === 500 ? 'Persistent storage request failed.' : message,
+    requestId
+  });
 }

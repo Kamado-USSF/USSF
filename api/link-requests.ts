@@ -6,6 +6,7 @@ import { findLinkRequestConflict, validateLinkRequest } from '../lib/validation'
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed.' });
 
+  const requestId = String(req.headers['x-vercel-id'] || randomUUID());
   try {
     const validation = validateLinkRequest(req.body);
     if (!validation.ok) return res.status(400).json({ success: false, error: validation.error });
@@ -48,6 +49,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!rows[0]) return res.status(409).json({ success: false, error: 'The account or CID became associated with another request. Refresh and verify the details.' });
     return res.status(201).json({ success: true, request });
   } catch (error) {
-    return sendApiError(res, error, 'POST /api/link-requests');
+    return sendApiError(res, error, 'POST /api/link-requests', requestId);
   }
 }
