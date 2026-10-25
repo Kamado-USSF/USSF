@@ -21,7 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const hostName = typeof body.hostName === 'string' ? body.hostName.trim() : '';
   const hostCid = typeof body.hostCid === 'string' ? body.hostCid.trim() : '';
   const summary = typeof body.summary === 'string' ? body.summary.trim() : '';
-  const date = typeof body.date === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(body.date) ? body.date : '';
+  const date = typeof body.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.date) ? body.date : '';
   const durationHours = Number(body.durationHours);
   const participants = Array.isArray(body.participants) && body.participants.every((x: unknown) => typeof x === 'string') ? body.participants.slice(0, 100) : null;
 
