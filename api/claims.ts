@@ -23,11 +23,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const date = typeof body.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.date) ? body.date : '';
   const proofUrl = typeof body.proofUrl === 'string' ? body.proofUrl.trim() : '';
 
-  if (!rewardTitle || rewardTitle.length > 200 || !rewardCategory || rewardCategory.length > 100 ||
-      !claimantName || claimantName.length > 100 || !claimantCid || claimantCid.length > 80 ||
-      !Number.isFinite(amount) || amount <= 0 || amount > 1_000_000_000_000 ||
-      !date || !validHttpUrl(proofUrl)) {
-    return res.status(400).json({ success: false, error: 'Claim details are invalid. Enter a positive amount, valid date, claimant details, and a complete HTTP/HTTPS proof URL.' });
+  // Return the exact field that failed validation so the UI can be corrected without guesswork.
+  if (!rewardTitle || rewardTitle.length > 200) {
+    return res.status(400).json({ success: false, error: 'Invalid claim: reward title is missing or too long.' });
+  }
+  if (!rewardCategory || rewardCategory.length > 100) {
+    return res.status(400).json({ success: false, error: 'Invalid claim: reward category is missing or too long.' });
+  }
+  if (!claimantName || claimantName.length > 100) {
+    return res.status(400).json({ success: false, error: 'Invalid claim: claimant name is missing or too long.' });
+  }
+  if (!claimantCid || claimantCid.length > 80) {
+    return res.status(400).json({ success: false, error: 'Invalid claim: claimant CID is missing or too long. Re-link your member account or contact an administrator.' });
+  }
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 1_000_000_000_000) {
+    return res.status(400).json({ success: false, error: 'Invalid claim: amount must be a positive number.' });
+  }
+  if (!date || !/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || Number.isNaN(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) {
+    return res.status(400).json({ success: false, error: 'Invalid claim: date must be a real calendar date in YYYY-MM-DD format.' });
+  }
+  if (!validHttpUrl(proofUrl)) {
+    return res.status(400).json({ success: false, error: 'Invalid claim: proof link must be a complete HTTP or HTTPS URL, including the domain (for example, https://imgur.com/...).' });
   }
 
   const claim = {
