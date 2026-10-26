@@ -78,7 +78,7 @@ export const USSFClaimModal: React.FC<USSFClaimModalProps> = ({
       quantity: isCombatTask ? currentQty : 1,
       claimantName,
       claimantCid,
-      date: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      date: new Date().toISOString().slice(0, 10),
       status: 'Pending',
       proofUrl,
       note: note ? `${note} ${multiplier > 1 ? `[${multiplier}X Event Applied]` : ''}` : (multiplier > 1 ? `[${multiplier}X Event Applied]` : 'Awaiting Command Review')
