@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "lastUpdated": "2026-10-26T07:21:02.183Z",
   "members": [
     {
       "id": "admin-kamado",
@@ -410,6 +411,27 @@
     "hexColor": "#000000",
     "alliance": "None",
     "type": "Law Enforcement Police Force Group (CIT2 Law Group)",
+    "doctrinalMissions": [
+      "Unconventional Warfare",
+      "Foreign Internal Defense",
+      "Direct Action",
+      "Counter-Insurgency",
+      "Special Reconnaissance",
+      "Counter-Terrorism",
+      "Information Operations",
+      "Counterproliferation of Weapons of Mass Destruction (WMD)",
+      "Security Force Assistance"
+    ],
+    "otherDuties": [
+      "Combat Search and Rescue (CSAR)",
+      "Counter-Narcotics",
+      "Hostage Rescue",
+      "Humanitarian Assistance",
+      "Humanitarian Demining",
+      "Peacekeeping",
+      "Psychological Operations",
+      "APB & Felon Manhunts"
+    ],
     "acceptanceRate": "10% Selection Pass Rate",
     "operatingTheaters": "Los Santos & Las Venturas (Ground, Sea, Air)"
   },
@@ -486,6 +508,94 @@
       "imageUrl": "/src/assets/images/hero_tactical_desert_1790341915780.jpg",
       "description": "Desert sand armored gun-truck livery with reinforced bull-bars and thermal searchlights.",
       "category": "Vehicle"
+    }
+  ],
+  "milestoneChoices": [
+    {
+      "id": "choice-7-cursor",
+      "milestoneDay": 7,
+      "type": "CUSTOM_CURSOR",
+      "title": "Custom Cursor: Solo Leveling Shadow Monarch",
+      "description": "Equip the exclusive dark obsidian shadow dagger and purple monarch flame hand pointer across the site.",
+      "rewardValue": "solo-leveling",
+      "previewImage": "/assets/aistudio/Solo_Leveling_Shadow_Arrow___Monarch_Hand_Animated_Cursor--cursor--SweezyCursors_493f92f5.png"
+    },
+    {
+      "id": "choice-7-namecard",
+      "milestoneDay": 7,
+      "type": "NAMECARD",
+      "title": "Custom Namecard Banner",
+      "description": "Equip an exclusive animated or aesthetic namecard theme (e.g. Changli: Blazing Vermilion Phoenix).",
+      "rewardValue": "Changli: Blazing Vermilion Phoenix"
+    },
+    {
+      "id": "choice-7-frame",
+      "milestoneDay": 7,
+      "type": "AVATAR_FRAME",
+      "title": "Specialist Diamond Avatar Frame",
+      "description": "Equip the glowing Specialist Diamond border around your tactical operator avatar.",
+      "rewardValue": "Specialist Diamond"
+    },
+    {
+      "id": "choice-7-cash",
+      "milestoneDay": 7,
+      "type": "CASH_POINTS",
+      "title": "Treasury Cash & Points Jackpot",
+      "description": "Claim $5,000,000 cash bonus + 50 Promotion Points disbursed to your career ledger.",
+      "rewardValue": "$5,000,000 + 50 Pts",
+      "cashAmount": 5000000,
+      "promotionPoints": 50
+    },
+    {
+      "id": "choice-7-title",
+      "milestoneDay": 7,
+      "type": "TITLE",
+      "title": "Commendation Title: \"Ironclad Vanguard\"",
+      "description": "Display an official prestigious title above your rank on your dossier and roster profile.",
+      "rewardValue": "Ironclad Vanguard"
+    },
+    {
+      "id": "choice-30-cursor",
+      "milestoneDay": 30,
+      "type": "CUSTOM_CURSOR",
+      "title": "Custom Cursor: Halo Energy Sword",
+      "description": "Equip the legendary plasma dual energy blade with electric blue corona across all pages.",
+      "rewardValue": "halo-sword",
+      "previewImage": "/assets/aistudio/Halo_Energy_Sword_Cursor--cursor--SweezyCursors_8d5744aa.png"
+    },
+    {
+      "id": "choice-30-namecard",
+      "milestoneDay": 30,
+      "type": "NAMECARD",
+      "title": "Supreme Archon Namecard Banner",
+      "description": "Equip the Ultra Prestige \"Raiden Shogun: Electro Eternity\" namecard banner.",
+      "rewardValue": "Raiden Shogun: Electro Eternity"
+    },
+    {
+      "id": "choice-30-frame",
+      "milestoneDay": 30,
+      "type": "AVATAR_FRAME",
+      "title": "Supreme Gold Aureole Frame",
+      "description": "Equip the highest echelon Supreme Gold Aureole border with radiant golden aura.",
+      "rewardValue": "Supreme Gold Aureole"
+    },
+    {
+      "id": "choice-30-cash",
+      "milestoneDay": 30,
+      "type": "CASH_POINTS",
+      "title": "Supreme Monthly Treasury Jackpot",
+      "description": "Disburse $25,000,000 cash bonus + 200 Promotion Points to your career balance.",
+      "rewardValue": "$25,000,000 + 200 Pts",
+      "cashAmount": 25000000,
+      "promotionPoints": 200
+    },
+    {
+      "id": "choice-30-title",
+      "milestoneDay": 30,
+      "type": "TITLE",
+      "title": "Supreme Commendation Title: \"Grand Marshal of the Citadel\"",
+      "description": "Endow your dossier with the highest 30-day active duty title in CIT2 Special Forces history.",
+      "rewardValue": "Grand Marshal of the Citadel"
     }
   ]
 }

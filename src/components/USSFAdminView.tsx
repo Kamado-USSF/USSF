@@ -374,8 +374,16 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
     setScanResult(null);
   };
 
+  const handleClearAuditLogs = () => {
+    tacticalAudio.playTargetLock();
+    localStorage.removeItem('ussf_audit_logs');
+    setAuditLogs([]);
+    setPruneNotice('Performance & Audit logs cleared successfully.');
+    setTimeout(() => setPruneNotice(null), 4000);
+  };
+
   const handleResetToCleanProductionState = async () => {
-    if (window.confirm('CRITICAL ACTION: Reset database to pristine empty production launch state? This will clear any test records, dummy member entries, and unverified claims while preserving rank definitions, 102 achievements, and official configuration.')) {
+    if (window.confirm('CRITICAL ACTION: Reset database to pristine empty production launch state? This will clear all test records, dummy member entries, audit logs, and unverified claims while preserving rank definitions, 102 achievements, and official configuration.')) {
       tacticalAudio.playTargetLock();
       try {
         await api.resetCleanDatabase();
@@ -390,9 +398,10 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
       localStorage.removeItem('ussf_registered_accounts');
       localStorage.removeItem('ussf_bootstrap_completed');
       localStorage.removeItem('ussf_logged_user');
+      localStorage.removeItem('ussf_audit_logs');
+      setAuditLogs([]);
       
-      appendAuditLog('Executed Full Clean Production Database Reset. Initial state established.');
-      alert('Pristine Clean Production State established. Refreshing application...');
+      alert('Pristine Clean Production State established. All audit logs and data reset. Refreshing application...');
       window.location.reload();
     }
   };
@@ -1140,12 +1149,12 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
               </form>
             )}
 
-            {/* SUBTAB 2: PROMOTION PAGES & 22 RANKS REQUIREMENTS EDITOR */}
+            {/* SUBTAB 2: PROMOTION PAGES & 20 RANKS REQUIREMENTS EDITOR */}
             {pageInfoSubTab === 'promotions' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-data uppercase text-amber-400 font-bold">
-                    EDIT 22 USSF RANKS & QUALIFICATION REQUIREMENTS
+                    EDIT 20 USSF RANKS & QUALIFICATION REQUIREMENTS
                   </h4>
                   <span className="text-[10px] font-data text-neutral-400">
                     Changes reflect immediately in Career Hierarchy & Calculator
@@ -2201,6 +2210,14 @@ export const USSFAdminView: React.FC<USSFAdminViewProps> = ({
                 >
                   <Search className="h-3.5 w-3.5" />
                   <span>DEEP SCAN DATABASE</span>
+                </button>
+                <button
+                  onClick={handleClearAuditLogs}
+                  className="px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-neutral-300 font-tactical text-xs font-bold uppercase flex items-center gap-1.5 cursor-pointer"
+                  title="Purge all audit logs immediately"
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-neutral-400" />
+                  <span>CLEAR AUDIT LOGS</span>
                 </button>
                 <button
                   onClick={handleResetToCleanProductionState}

@@ -7,6 +7,9 @@ import {
 import { USSFMember, USSF_RANKS, DiscordPresenceStatus, CUSTOM_CURSORS_CATALOG } from '../data/ussfData';
 import { tacticalAudio } from '../utils/audioSynth';
 import { BiometricModal } from './BiometricModal';
+import { getAvatarFrameCss } from '../utils/avatarFrameUtils';
+import { optimizeUploadImage } from '../utils/imageCompressor';
+import { CUSTOM_AVATAR_FRAMES } from '../data/customizationAssets';
 
 interface USSFProfileViewProps {
   currentUser: USSFMember | null;
@@ -81,60 +84,35 @@ export const USSFProfileView: React.FC<USSFProfileViewProps> = ({
     setPresenceStatus(currentUser.presenceStatus || 'Online');
   }, [currentUser]);
 
-  // File Upload Handlers (Direct device upload converting to DataURL)
-  const handleAvatarFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // File Upload Handlers with Canvas Compression (Prevents QuotaExceededError & Black Screen)
+  const handleAvatarFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setAvatarUrl(event.target.result as string);
-          setCustomAvatarInput(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await optimizeUploadImage(file, 400, 400, 0.85);
+        setAvatarUrl(compressed);
+        setCustomAvatarInput(compressed);
+        setStatusNotice('Avatar uploaded and optimized successfully.');
+        setTimeout(() => setStatusNotice(null), 3000);
+      } catch (err: any) {
+        console.error('Failed to optimize avatar image:', err);
+      }
     }
   };
 
-  const handleFrameFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNamecardFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setAvatarFrame('Custom Custom Frame');
-          setCustomFrameImage(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleNamecardFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setNamecard('Custom Commission Banner');
-          setCustomNamecardImage(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleCursorFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setCustomCursor(event.target.result as string);
-          setCustomCursorUrl(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await optimizeUploadImage(file, 1200, 600, 0.82);
+        setNamecard('Custom Commission Banner');
+        setCustomNamecardImage(compressed);
+        setNamecardBgUrl(compressed);
+        setStatusNotice('Namecard banner uploaded and optimized (no black-screen crash).');
+        setTimeout(() => setStatusNotice(null), 3000);
+      } catch (err: any) {
+        console.error('Failed to optimize namecard image:', err);
+      }
     }
   };
 
@@ -151,7 +129,7 @@ export const USSFProfileView: React.FC<USSFProfileViewProps> = ({
     { label: 'Group Formation', src: '/src/assets/images/special_forces_unit_1790346782492.jpg' }
   ];
 
-  // Available Avatar Frames WITH RANK LOCK REQUIREMENTS
+  // Available Avatar Frames WITH OFFICIAL RANK LOCK REQUIREMENTS (Max rank is Level 20: High Commander)
   const frameOptions = [
     { name: 'Standard Issue Border', minLevel: 1, css: 'frame-recruit-ring' },
     { name: 'Recruit Ring', minLevel: 4, css: 'frame-recruit-ring' },
@@ -160,8 +138,8 @@ export const USSFProfileView: React.FC<USSFProfileViewProps> = ({
     { name: 'Emerald Chevrons', minLevel: 14, css: 'frame-emerald-chevron' },
     { name: 'Cyan Tactical', minLevel: 16, css: 'frame-cyan-tactical' },
     { name: 'Golden Star Officer', minLevel: 18, css: 'frame-golden-star' },
-    { name: 'Vice Commander Ruby', minLevel: 21, css: 'frame-vice-ruby' },
-    { name: 'Supreme Gold Aureole', minLevel: 22, css: 'frame-supreme-gold' }
+    { name: 'Vice Commander Ruby', minLevel: 17, css: 'frame-vice-ruby' },
+    { name: 'Supreme Gold Aureole', minLevel: 20, css: 'frame-supreme-gold' }
   ];
 
   const cursorOptions = [
@@ -378,7 +356,7 @@ export const USSFProfileView: React.FC<USSFProfileViewProps> = ({
                 <div className="flex items-center gap-4">
                   <div className="relative">
                     <div className={`relative h-20 w-20 rounded-full overflow-hidden ${
-                      frameOptions.find(f => f.name === avatarFrame)?.css || 'frame-recruit-ring'
+                      getAvatarFrameCss(avatarFrame)
                     }`}>
                       <img
                         src={customAvatarInput.trim() ? customAvatarInput.trim() : avatarUrl}
@@ -652,19 +630,45 @@ export const USSFProfileView: React.FC<USSFProfileViewProps> = ({
                 })}
               </div>
 
-              {/* Custom Frame Upload */}
-              <div className="pt-2 border-t border-neutral-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-                <label className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-700 hover:border-amber-400 text-amber-300 font-bold text-xs uppercase cursor-pointer transition-colors">
-                  <Award className="h-4 w-4" />
-                  <span>UPLOAD CUSTOM FRAME</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFrameFileUpload}
-                    className="hidden"
-                  />
-                </label>
-                {customFrameImage && <span className="text-[10px] text-emerald-400 font-data">Custom Frame Loaded!</span>}
+              {/* Special Cosmetic Avatar Frames (Login Rewards & Milestones) */}
+              <div className="pt-3 border-t border-neutral-800">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-tactical uppercase tracking-wider text-amber-400 font-bold flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                    <span>PRESTIGE & LOGIN MILESTONE FRAMES (19 DESIGNS)</span>
+                  </span>
+                  <span className="text-[10px] font-data text-neutral-400">Awarded via 7D / 30D Logins & Operations</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {CUSTOM_AVATAR_FRAMES.map(cosmetic => {
+                    const isSelected = avatarFrame === cosmetic.name || avatarFrame === cosmetic.id;
+                    return (
+                      <button
+                        key={cosmetic.id}
+                        type="button"
+                        onClick={() => {
+                          tacticalAudio.playTacticalClick();
+                          setAvatarFrame(cosmetic.name);
+                          setStatusNotice(`Cosmetic frame equipped: ${cosmetic.name}`);
+                          setTimeout(() => setStatusNotice(null), 3000);
+                        }}
+                        className={`p-2.5 rounded-lg border text-xs font-data transition-all text-left flex items-center justify-between cursor-pointer ${
+                          isSelected
+                            ? 'border-cyan-400 bg-cyan-950/40 text-cyan-200 font-bold shadow-lg'
+                            : 'border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-neutral-700'
+                        }`}
+                      >
+                        <div className="truncate">
+                          <div className="text-[11px] font-semibold truncate">{cosmetic.name}</div>
+                          <div className="text-[9px] text-neutral-500 font-mono">{cosmetic.category}</div>
+                        </div>
+                        <div className={`h-6 w-6 rounded-full overflow-hidden shrink-0 ml-2 ${cosmetic.frameClass}`}>
+                          <img src={avatarUrl} alt="preview" className="h-full w-full object-cover" />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -751,33 +755,6 @@ export const USSFProfileView: React.FC<USSFProfileViewProps> = ({
                     </button>
                   );
                 })}
-              </div>
-
-              {/* Custom Cursor Upload */}
-              <div className="pt-2 border-t border-neutral-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-                <label className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-700 hover:border-emerald-400 text-emerald-300 font-bold text-xs uppercase cursor-pointer transition-colors">
-                  <MousePointer className="h-4 w-4" />
-                  <span>UPLOAD CUSTOM CURSOR (.PNG/.CUR)</span>
-                  <input
-                    type="file"
-                    accept="image/png,image/x-icon,image/svg+xml,image/gif"
-                    onChange={(e) => {
-                      handleCursorFileUpload(e);
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (evt) => {
-                          if (evt.target?.result) {
-                            onUpdateProfile({ customCursor: evt.target.result as string });
-                          }
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                    className="hidden"
-                  />
-                </label>
-                {customCursorUrl && <span className="text-[10px] text-emerald-400 font-data">Custom File Uploaded & Active!</span>}
               </div>
             </div>
 

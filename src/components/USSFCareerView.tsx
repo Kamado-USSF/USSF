@@ -210,7 +210,7 @@ export const USSFCareerView: React.FC<USSFCareerViewProps> = ({
                 OFFICIAL TIERS
               </span>
               <span className="text-4xl font-bold font-data text-amber-400 tabular-nums">
-                22
+                20
               </span>
             </div>
           </div>
@@ -228,7 +228,7 @@ export const USSFCareerView: React.FC<USSFCareerViewProps> = ({
                   : 'bg-neutral-900/80 border border-neutral-800 text-neutral-400 hover:text-neutral-200'
               }`}
             >
-              Full Rank Hierarchy (22 Tiers)
+              Full Rank Hierarchy (20 Tiers)
             </button>
 
             <button
@@ -341,7 +341,7 @@ export const USSFCareerView: React.FC<USSFCareerViewProps> = ({
                 </h3>
               </div>
               <p className="text-xs text-neutral-300 font-sans max-w-md mx-auto leading-relaxed">
-                Advancement through the 22 Special Forces rank tiers requires an active, commissioned member dossier. Unlinked civilian accounts start at Tier 0 with 0 points.
+                Advancement through the 20 Special Forces rank tiers requires an active, commissioned member dossier. Unlinked civilian accounts start at Tier 0 with 0 points.
               </p>
               <div className="pt-2">
                 <button
@@ -707,95 +707,263 @@ export const USSFCareerView: React.FC<USSFCareerViewProps> = ({
 
         {/* TAB 3: PROMOTION ELIGIBILITY CALCULATOR */}
         {activeTab === 'calculator' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-6 rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 md:p-8 space-y-6">
-              <h2 className="text-2xl font-bold font-tactical uppercase text-neutral-100">
-                Check Your Promotion Qualification
-              </h2>
-              <p className="text-xs text-neutral-400 font-sans leading-relaxed">
-                Enter your total active Special Forces service days and CIT2 verified points from the group F5 panel to see which rank you currently qualify for.
-              </p>
-
-              <div className="space-y-5">
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              <div className="lg:col-span-6 rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 md:p-8 space-y-6">
                 <div>
-                  <div className="flex justify-between text-xs font-data mb-1.5">
-                    <span className="text-neutral-300">ACTIVE SERVICE DAYS</span>
-                    <span className="text-amber-400 font-bold tabular-nums">{inputDays} Days</span>
+                  <h2 className="text-2xl font-bold font-tactical uppercase text-neutral-100">
+                    Promotion Eligibility Calculator
+                  </h2>
+                  <p className="text-xs text-neutral-400 font-sans leading-relaxed mt-1">
+                    Enter your total active Special Forces service days and CIT2 verified points from the group F5 panel to calculate your qualification across all 20 ranks.
+                  </p>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Days Input */}
+                  <div className="p-4 rounded-xl bg-neutral-950/80 border border-neutral-800 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-data">
+                      <span className="text-neutral-300 font-bold uppercase">ACTIVE SERVICE DAYS</span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          max="1000"
+                          value={inputDays}
+                          onChange={(e) => setInputDays(Math.max(0, parseInt(e.target.value) || 0))}
+                          className="w-20 bg-neutral-900 border border-neutral-700 rounded px-2 py-0.5 text-right font-bold text-amber-400 text-xs font-mono focus:outline-none focus:border-amber-400"
+                        />
+                        <span className="text-neutral-400">Days</span>
+                      </div>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="400"
+                      value={Math.min(400, inputDays)}
+                      onChange={(e) => setInputDays(Number(e.target.value))}
+                      className="w-full accent-amber-500 h-2 bg-neutral-800 rounded cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] font-data text-neutral-500">
+                      <span>0d (Recruit)</span>
+                      <span>140d (Captain)</span>
+                      <span>210d (VCMD)</span>
+                      <span>365d (High Commander)</span>
+                    </div>
                   </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="260"
-                    value={inputDays}
-                    onChange={(e) => setInputDays(Number(e.target.value))}
-                    className="w-full accent-amber-500 h-2 bg-neutral-800 rounded cursor-pointer"
-                  />
-                  <div className="flex justify-between text-[10px] font-data text-neutral-500 mt-1">
-                    <span>0 Days (Recruit)</span>
-                    <span>120 Days (Captain)</span>
-                    <span>240+ Days (Vice Commander)</span>
+
+                  {/* Points Input */}
+                  <div className="p-4 rounded-xl bg-neutral-950/80 border border-neutral-800 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-data">
+                      <span className="text-neutral-300 font-bold uppercase">GROUP F5 PROMOTION POINTS</span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          max="20000"
+                          step="25"
+                          value={inputPoints}
+                          onChange={(e) => setInputPoints(Math.max(0, parseInt(e.target.value) || 0))}
+                          className="w-24 bg-neutral-900 border border-neutral-700 rounded px-2 py-0.5 text-right font-bold text-emerald-400 text-xs font-mono focus:outline-none focus:border-emerald-400"
+                        />
+                        <span className="text-neutral-400">Pts</span>
+                      </div>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="6000"
+                      step="25"
+                      value={Math.min(6000, inputPoints)}
+                      onChange={(e) => setInputPoints(Number(e.target.value))}
+                      className="w-full accent-emerald-500 h-2 bg-neutral-800 rounded cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] font-data text-neutral-500">
+                      <span>0 Pts</span>
+                      <span>1,100 (2LT)</span>
+                      <span>3,100 (VCMD)</span>
+                      <span>5,500 Pts (HCMD)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Result Box */}
+              <div className="lg:col-span-6 rounded-xl border border-neutral-800 bg-[#121612] p-6 md:p-8 flex flex-col justify-between">
+                <div>
+                  <div className="text-xs font-data uppercase tracking-wider text-emerald-400 mb-2 font-bold flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>HIGHEST QUALIFIED RANK LEVEL</span>
+                  </div>
+
+                  <div className="text-3xl md:text-5xl font-black font-tactical uppercase text-neutral-100 mb-2">
+                    {qualifiedRank.name}
+                  </div>
+
+                  <div
+                    className="inline-block px-3 py-1 rounded text-xs font-data font-bold uppercase tracking-wider mb-4"
+                    style={{
+                      backgroundColor: `${qualifiedRank.badgeColor}25`,
+                      color: qualifiedRank.badgeColor,
+                      border: `1px solid ${qualifiedRank.badgeColor}50`
+                    }}
+                  >
+                    RANK LEVEL {qualifiedRank.level} · {qualifiedRank.category || 'Regular'} · ORDER #{qualifiedRank.order}
+                  </div>
+
+                  <div className="space-y-3 text-xs font-sans text-neutral-300">
+                    <p>
+                      With <strong className="text-white font-data">{inputDays} active days</strong> and <strong className="text-white font-data">{inputPoints.toLocaleString()} points</strong>, you satisfy baseline qualifications for <strong className="text-amber-400 font-bold">{qualifiedRank.name}</strong> (Requires {qualifiedRank.requiredDays}d / {qualifiedRank.requiredPoints.toLocaleString()}p).
+                    </p>
+
+                    {/* Next Rank Deficit */}
+                    {(() => {
+                      const nextRank = [...USSF_RANKS].sort((a, b) => a.level - b.level).find(r => r.level > qualifiedRank.level && (r.requiredDays > 0 || r.requiredPoints > 0));
+                      if (!nextRank) {
+                        return (
+                          <div className="p-3 rounded-lg bg-rose-950/40 border border-rose-500/40 text-rose-300 text-xs font-data">
+                            👑 Maximum achievable rank tier attained! High Commander is the supreme rank in the United States Special Forces doctrine.
+                          </div>
+                        );
+                      }
+                      const daysNeeded = Math.max(0, nextRank.requiredDays - inputDays);
+                      const pointsNeeded = Math.max(0, nextRank.requiredPoints - inputPoints);
+                      return (
+                        <div className="p-3 rounded-lg bg-neutral-900 border border-neutral-800 space-y-1.5">
+                          <span className="text-[10px] font-data text-neutral-400 uppercase block font-bold">NEXT ADVANCEMENT TARGET:</span>
+                          <div className="flex items-center justify-between text-xs font-data">
+                            <span className="text-amber-400 font-bold">{nextRank.name} (Lvl {nextRank.level})</span>
+                            <span className="text-neutral-400 font-mono">{nextRank.requiredDays}d / {nextRank.requiredPoints.toLocaleString()}p</span>
+                          </div>
+                          <div className="text-[11px] font-data text-neutral-300">
+                            Deficit: <span className="text-amber-300 font-bold">+{daysNeeded} days</span> and <span className="text-emerald-300 font-bold">+{pointsNeeded.toLocaleString()} points</span>.
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 
-                <div>
-                  <div className="flex justify-between text-xs font-data mb-1.5">
-                    <span className="text-neutral-300">GROUP ACTIVITY & ARREST POINTS</span>
-                    <span className="text-emerald-400 font-bold tabular-nums">{inputPoints.toLocaleString()} Points</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="3000"
-                    step="25"
-                    value={inputPoints}
-                    onChange={(e) => setInputPoints(Number(e.target.value))}
-                    className="w-full accent-emerald-500 h-2 bg-neutral-800 rounded cursor-pointer"
-                  />
-                  <div className="flex justify-between text-[10px] font-data text-neutral-500 mt-1">
-                    <span>0 Pts</span>
-                    <span>1,050 Pts (Lieutenant)</span>
-                    <span>2,600+ Pts (Vice Commander)</span>
-                  </div>
+                <div className="mt-8 pt-4 border-t border-neutral-800 text-xs font-data text-neutral-500 flex items-center justify-between">
+                  <span>SPECIAL FORCES RANK DOCTRINE</span>
+                  <span className="text-amber-400 font-bold">ALL 20 RANKS COVERAGE</span>
                 </div>
               </div>
             </div>
 
-            {/* Result Box */}
-            <div className="lg:col-span-6 rounded-xl border border-neutral-800 bg-[#121612] p-6 md:p-8 flex flex-col justify-between">
-              <div>
-                <div className="text-xs font-data uppercase tracking-wider text-emerald-400 mb-2 font-bold flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>CALCULATED ELIGIBILITY</span>
-                </div>
-
-                <div className="text-4xl md:text-5xl font-black font-tactical uppercase text-neutral-100 mb-2">
-                  {qualifiedRank.name}
-                </div>
-
-                <div
-                  className="inline-block px-3 py-1 rounded text-xs font-data font-bold uppercase tracking-wider mb-4"
-                  style={{
-                    backgroundColor: `${qualifiedRank.badgeColor}25`,
-                    color: qualifiedRank.badgeColor,
-                    border: `1px solid ${qualifiedRank.badgeColor}50`
-                  }}
-                >
-                  RANK LEVEL {qualifiedRank.level} · ORDER #{qualifiedRank.order}
-                </div>
-
-                <div className="space-y-2 text-xs font-sans text-neutral-300">
-                  <p>
-                    Based on <strong className="text-neutral-100 font-data">{inputDays} active days</strong> and <strong className="text-neutral-100 font-data">{inputPoints.toLocaleString()} activity points</strong>, you meet the baseline requirements for <span className="font-bold text-amber-400">{qualifiedRank.name}</span>.
-                  </p>
-                  <p className="text-neutral-400 text-[11px]">
-                    Note: Ranks from Honorable (Level 20) and above also require High Command vote and direct leadership appointment.
+            {/* Comprehensive All 20 Ranks Qualification Breakdown Table */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-800 pb-3">
+                <div>
+                  <h3 className="font-tactical font-black text-lg text-white uppercase flex items-center gap-2">
+                    <Medal className="h-5 w-5 text-amber-400" />
+                    <span>FULL 20-RANK QUALIFICATION MATRIX</span>
+                  </h3>
+                  <p className="text-xs text-neutral-400 font-sans">
+                    Live evaluation of your entered {inputDays} Days and {inputPoints.toLocaleString()} Points against every tier in the official USSF hierarchy.
                   </p>
                 </div>
+                <span className="text-[11px] font-data text-amber-400 bg-amber-950/60 border border-amber-500/40 px-3 py-1 rounded-full self-start sm:self-auto">
+                  Calculated against {inputDays}d & {inputPoints.toLocaleString()}p
+                </span>
               </div>
 
-              <div className="mt-8 pt-4 border-t border-neutral-800 text-xs font-data text-neutral-500 flex items-center justify-between">
-                <span>SPECIAL FORCES RANK DOCTRINE</span>
-                <span className="text-amber-400">CIT2 LAW GROUP</span>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-data">
+                  <thead>
+                    <tr className="border-b border-neutral-800 text-neutral-400 text-[10px] uppercase">
+                      <th className="py-2.5 px-3">Level</th>
+                      <th className="py-2.5 px-3">Rank Title</th>
+                      <th className="py-2.5 px-3">Category</th>
+                      <th className="py-2.5 px-3">Required Days</th>
+                      <th className="py-2.5 px-3">Required Points</th>
+                      <th className="py-2.5 px-3 text-right">Status / Deficit</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-800/60">
+                    {[...USSF_RANKS].sort((a, b) => b.level - a.level).map(rank => {
+                      const isSpecialAppointment = rank.requiredDays === 0 && rank.requiredPoints === 0 && rank.level > 1;
+                      const hasDays = inputDays >= rank.requiredDays;
+                      const hasPoints = inputPoints >= rank.requiredPoints;
+                      const isFullyQualified = !isSpecialAppointment && hasDays && hasPoints;
+                      const isCurrentHighest = qualifiedRank.level === rank.level;
+                      const missingDays = Math.max(0, rank.requiredDays - inputDays);
+                      const missingPoints = Math.max(0, rank.requiredPoints - inputPoints);
+
+                      return (
+                        <tr
+                          key={rank.level}
+                          className={`transition-colors ${
+                            isCurrentHighest
+                              ? 'bg-amber-950/40 border-l-4 border-amber-400'
+                              : isFullyQualified
+                              ? 'bg-emerald-950/15 hover:bg-emerald-950/30'
+                              : 'hover:bg-neutral-800/40 opacity-75 hover:opacity-100'
+                          }`}
+                        >
+                          <td className="py-2.5 px-3 font-mono font-bold">
+                            <span
+                              className="px-2 py-0.5 rounded text-[11px]"
+                              style={{
+                                backgroundColor: `${rank.badgeColor}25`,
+                                color: rank.badgeColor,
+                                border: `1px solid ${rank.badgeColor}50`
+                              }}
+                            >
+                              LVL {rank.level}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <div className="font-bold text-white flex items-center gap-1.5">
+                              <span>{rank.name}</span>
+                              {isCurrentHighest && (
+                                <span className="text-[9px] bg-amber-400 text-neutral-950 font-black px-1.5 py-0.2 rounded uppercase">
+                                  YOUR LEVEL
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-neutral-500 font-sans truncate max-w-xs">{rank.description}</div>
+                          </td>
+                          <td className="py-2.5 px-3 text-neutral-400">{rank.category}</td>
+                          <td className="py-2.5 px-3 font-mono">
+                            {isSpecialAppointment ? (
+                              <span className="text-pink-400 font-bold">Appointment Only</span>
+                            ) : (
+                              <span className={hasDays ? 'text-emerald-400 font-bold' : 'text-neutral-400'}>
+                                {rank.requiredDays} Days
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono">
+                            {isSpecialAppointment ? (
+                              <span className="text-pink-400 font-bold">High Command Vote</span>
+                            ) : (
+                              <span className={hasPoints ? 'text-emerald-400 font-bold' : 'text-neutral-400'}>
+                                {rank.requiredPoints.toLocaleString()} Pts
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-right">
+                            {isSpecialAppointment ? (
+                              <span className="px-2 py-0.5 rounded bg-pink-950/80 border border-pink-500/40 text-pink-300 font-bold text-[10px]">
+                                COMMAND VOTE
+                              </span>
+                            ) : isFullyQualified ? (
+                              <span className="px-2.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 font-bold text-[10px] inline-flex items-center gap-1">
+                                <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                                <span>QUALIFIED</span>
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-amber-400 font-mono">
+                                Needs {missingDays > 0 ? `+${missingDays}d ` : ''}{missingPoints > 0 ? `+${missingPoints.toLocaleString()}p` : ''}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>

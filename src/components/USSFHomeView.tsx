@@ -69,7 +69,7 @@ export const USSFHomeView: React.FC<USSFHomeViewProps> = ({
 
               <div className="rounded bg-neutral-900/60 p-4 border border-neutral-800/60">
                 <div className="text-3xl sm:text-4xl font-bold font-data text-neutral-100 tabular-nums">
-                  22
+                  20
                 </div>
                 <div className="text-[10px] font-data text-neutral-400 uppercase mt-1">
                   OFFICIAL RANKS
@@ -212,7 +212,7 @@ export const USSFHomeView: React.FC<USSFHomeViewProps> = ({
             >
               <div className="flex items-center justify-between text-xs font-data text-neutral-400 mb-3">
                 <span className="text-amber-500 font-bold uppercase">03 / CAREER</span>
-                <span className="text-neutral-400">22 TIERS</span>
+                <span className="text-neutral-400">20 TIERS</span>
               </div>
               <h4 className="text-xl font-bold font-tactical uppercase text-neutral-100 group-hover:text-amber-300 transition-colors">
                 Promotion path

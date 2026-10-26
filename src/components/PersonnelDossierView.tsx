@@ -7,6 +7,7 @@ import {
 import { USSFMember, USSF_GROUP_INFO } from '../data/ussfData';
 import { tacticalAudio } from '../utils/audioSynth';
 import { USSFView } from './USSFHeader';
+import { getAvatarFrameCss } from '../utils/avatarFrameUtils';
 
 interface PersonnelDossierViewProps {
   member: USSFMember;
@@ -32,7 +33,7 @@ export const PersonnelDossierView: React.FC<PersonnelDossierViewProps> = ({
   const [editDiscordTag, setEditDiscordTag] = useState(member.discordTag || '');
   const [editWeapons, setEditWeapons] = useState(member.preferredWeapons || 'M4 Carbine, Deagle');
 
-  const canEdit = currentUser && (currentUser.cid === member.cid || currentUser.isOwner || currentUser.rankLevel === 22);
+  const canEdit = Boolean(currentUser && (currentUser.cid === member.cid || currentUser.isOwner || (currentUser.rankLevel && currentUser.rankLevel >= 20) || currentUser.isAdmin));
 
   const daysPlaytime = Math.floor(member.playtimeHours / 24);
   const remainderHours = member.playtimeHours % 24;
@@ -50,18 +51,7 @@ export const PersonnelDossierView: React.FC<PersonnelDossierViewProps> = ({
   };
 
   const getFrameCss = (frameName?: string) => {
-    switch (frameName) {
-      case 'Supreme Gold Aureole': return 'frame-supreme-gold';
-      case 'Vice Commander Ruby': return 'frame-vice-ruby';
-      case 'Golden Star Officer': return 'frame-golden-star';
-      case 'Cyan Tactical': return 'frame-cyan-tactical';
-      case 'Emerald Chevrons': return 'frame-emerald-chevron';
-      case 'Single Gold Chevron': return 'frame-golden-star';
-      case 'Specialist Diamond': return 'frame-emerald-chevron';
-      case 'Recruit Ring': return 'frame-recruit-ring';
-      case 'Standard Issue Border': return 'frame-recruit-ring';
-      default: return 'frame-recruit-ring';
-    }
+    return getAvatarFrameCss(frameName);
   };
 
   // Namecard Theme CSS

@@ -12,6 +12,8 @@ interface USSFClaimModalProps {
   preselectedQuantity?: number;
   activeMultiplier?: number;
   currentUser?: USSFMember | null;
+  batchItems?: Array<{ reward: RewardItem; quantity: number }>;
+  totalBatchAmount?: number;
 }
 
 export const USSFClaimModal: React.FC<USSFClaimModalProps> = ({
@@ -22,7 +24,9 @@ export const USSFClaimModal: React.FC<USSFClaimModalProps> = ({
   preselectedReward,
   preselectedQuantity = 1,
   activeMultiplier = 1,
-  currentUser
+  currentUser,
+  batchItems = [],
+  totalBatchAmount
 }) => {
   const [selectedRewardId, setSelectedRewardId] = useState<string>(
     preselectedReward?.id || rewardCatalog[0]?.id || ''
@@ -52,11 +56,14 @@ export const USSFClaimModal: React.FC<USSFClaimModalProps> = ({
 
   if (!isOpen) return null;
 
+  const isBatch = Boolean(batchItems && batchItems.length > 1);
   const currentReward = rewardCatalog.find(r => r.id === selectedRewardId) || rewardCatalog[0];
   const isCombatTask = currentReward?.category === 'Combat & Tactical' || currentReward?.allowQuantity;
   const currentQty = isCombatTask ? Math.max(1, quantity) : 1;
   const multiplier = activeMultiplier > 1 ? activeMultiplier : 1;
-  const totalAmount = (currentReward?.payoutAmount || 0) * currentQty * multiplier;
+  const totalAmount = isBatch
+    ? (totalBatchAmount || batchItems.reduce((sum, b) => sum + (b.reward.payoutAmount * b.quantity * multiplier), 0))
+    : (currentReward?.payoutAmount || 0) * currentQty * multiplier;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,16 +79,18 @@ export const USSFClaimModal: React.FC<USSFClaimModalProps> = ({
 
     const newClaim: FinancialClaim = {
       id: `clm-${Date.now()}`,
-      rewardTitle: isCombatTask && currentQty > 1 ? `${currentReward.title} (x${currentQty})` : currentReward.title,
-      rewardCategory: currentReward.category,
+      rewardTitle: isBatch
+        ? `Multi-Claim (${batchItems.length} Tasks): ${batchItems.map(b => `${b.reward.title}${b.quantity > 1 ? ` x${b.quantity}` : ''}`).join(', ')}`
+        : isCombatTask && currentQty > 1 ? `${currentReward.title} (x${currentQty})` : currentReward.title,
+      rewardCategory: isBatch ? 'Multi-Task Claim' : currentReward.category,
       amount: totalAmount,
-      quantity: isCombatTask ? currentQty : 1,
+      quantity: isBatch ? batchItems.reduce((acc, b) => acc + b.quantity, 0) : isCombatTask ? currentQty : 1,
       claimantName,
       claimantCid,
       date: new Date().toISOString().slice(0, 10),
       status: 'Pending',
       proofUrl,
-      note: note ? `${note} ${multiplier > 1 ? `[${multiplier}X Event Applied]` : ''}` : (multiplier > 1 ? `[${multiplier}X Event Applied]` : 'Awaiting Command Review')
+      note: note ? `${note} ${multiplier > 1 ? `[${multiplier}X Event Applied]` : ''}` : (multiplier > 1 ? `[${multiplier}X Event Applied]` : (isBatch ? `Multi-Task Batch (${batchItems.length} tasks)` : 'Awaiting Command Review'))
     };
 
     tacticalAudio.playTargetLock();
@@ -122,48 +131,71 @@ export const USSFClaimModal: React.FC<USSFClaimModalProps> = ({
             </div>
           )}
 
-          <div>
-            <label className="block text-neutral-400 mb-1 uppercase font-bold">
-              SELECT OBJECTIVE REWARD
-            </label>
-            <select
-              value={selectedRewardId}
-              onChange={(e) => setSelectedRewardId(e.target.value)}
-              className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-200 focus:border-amber-400 focus:outline-none"
-            >
-              {rewardCatalog.map((r) => (
-                <option key={r.id} value={r.id}>
-                  ${r.payoutAmount.toLocaleString()} · {r.title} ({r.category})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Numeric Quantity Input for Combat & Tactical Tasks */}
-          {isCombatTask && (
-            <div className="p-3 rounded-lg bg-neutral-950 border border-amber-500/40 space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-amber-400 uppercase font-bold flex items-center gap-1.5 text-[11px]">
-                  <Hash className="h-3.5 w-3.5" />
-                  <span>NUMBER OF KILLS / ARRESTS / BLIPS (QUANTITY):</span>
-                </label>
-                <span className="text-[10px] text-neutral-400">Multiplier Enabled</span>
+          {isBatch ? (
+            <div className="p-3 rounded-lg bg-neutral-950 border border-emerald-500/40 space-y-2">
+              <div className="flex justify-between items-center text-xs font-bold text-emerald-400 border-b border-neutral-800 pb-2">
+                <span>BATCH MULTI-TASK CLAIM ({batchItems.length} TASKS SELECTED)</span>
+                <span className="font-mono text-sm">${totalAmount.toLocaleString()}</span>
               </div>
-              <div className="flex items-center gap-3">
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-28 rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-neutral-100 font-bold text-center focus:border-amber-400 focus:outline-none text-base tabular-nums"
-                />
-                <span className="text-neutral-400 text-xs">
-                  ${currentReward.payoutAmount.toLocaleString()} × {currentQty} count
-                  {multiplier > 1 ? ` × ${multiplier}X event` : ''}
-                </span>
+              <div className="max-h-36 overflow-y-auto space-y-1.5 divide-y divide-neutral-800/60 pr-1">
+                {batchItems.map((b, idx) => (
+                  <div key={idx} className="pt-1.5 flex items-center justify-between text-[11px] text-neutral-300">
+                    <span className="truncate max-w-[280px]">
+                      {b.reward.title} {b.quantity > 1 ? `(x${b.quantity})` : ''}
+                    </span>
+                    <span className="font-mono text-emerald-400 shrink-0 font-bold">
+                      ${(b.reward.payoutAmount * b.quantity * multiplier).toLocaleString()}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
+          ) : (
+            <>
+              <div>
+                <label className="block text-neutral-400 mb-1 uppercase font-bold">
+                  SELECT OBJECTIVE REWARD
+                </label>
+                <select
+                  value={selectedRewardId}
+                  onChange={(e) => setSelectedRewardId(e.target.value)}
+                  className="w-full rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-200 focus:border-amber-400 focus:outline-none"
+                >
+                  {rewardCatalog.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      ${r.payoutAmount.toLocaleString()} · {r.title} ({r.category})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Numeric Quantity Input for Combat & Tactical Tasks */}
+              {isCombatTask && (
+                <div className="p-3 rounded-lg bg-neutral-950 border border-amber-500/40 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-amber-400 uppercase font-bold flex items-center gap-1.5 text-[11px]">
+                      <Hash className="h-3.5 w-3.5" />
+                      <span>NUMBER OF KILLS / ARRESTS / BLIPS (QUANTITY):</span>
+                    </label>
+                    <span className="text-[10px] text-neutral-400">Multiplier Enabled</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={quantity}
+                      onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-28 rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-neutral-100 font-bold text-center focus:border-amber-400 focus:outline-none text-base tabular-nums"
+                    />
+                    <span className="text-neutral-400 text-xs">
+                      ${currentReward.payoutAmount.toLocaleString()} × {currentQty} count
+                      {multiplier > 1 ? ` × ${multiplier}X event` : ''}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {/* Total Claim Amount Display with breakdown */}

@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  DollarSign, CheckCircle2, Clock, AlertCircle, PlusCircle, 
-  ArrowRight, Shield, Filter, FileText, CheckSquare, Square, Target, 
-  Coins, Terminal, TrendingUp, BarChart3, Users, Eye, MousePointerClick, 
-  Lock, ShieldCheck, Download, Sparkles, RefreshCw, KeyRound, Gift, Calendar, Hash,
-  X, Award, Crown
+  DollarSign, CheckCircle2, AlertCircle, PlusCircle, 
+  ArrowRight, Shield, FileText, Target, 
+  Lock, ShieldCheck, Sparkles, Gift, Hash, X
 } from 'lucide-react';
 import { 
   FinancialClaim, RewardItem, REALISTIC_REWARD_CATALOG, PendingLoginRewardClaim, 
@@ -18,7 +16,13 @@ interface USSFFinancialViewProps {
   claims: FinancialClaim[];
   rewardCatalog: RewardItem[];
   events?: AdminEvent[];
-  onOpenClaimModal: (preselectedReward?: RewardItem, quantity?: number, totalAmount?: number) => void;
+  onOpenClaimModal: (
+    preselectedReward?: RewardItem,
+    quantity?: number,
+    totalAmount?: number,
+    batchItems?: Array<{ reward: RewardItem; quantity: number }>,
+    totalBatchAmount?: number
+  ) => void;
   onClaimDailyLoginReward?: (claim: PendingLoginRewardClaim) => void;
   currentUser?: USSFMember | null;
   onUpdateProfile?: (updated: Partial<USSFMember>) => void;
@@ -35,49 +39,51 @@ export const USSFFinancialView: React.FC<USSFFinancialViewProps> = ({
   onUpdateProfile,
   milestoneChoices = DEFAULT_MILESTONE_CHOICES
 }) => {
-  const [activeTab, setActiveTab] = useState<'catalog' | 'multi' | 'dailyLogin' | 'analytics' | 'claims'>('catalog');
+  const [activeTab, setActiveTab] = useState<'catalog' | 'dailyLogin' | 'claims'>('catalog');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [taskQuantities, setTaskQuantities] = useState<Record<string, number>>({});
   const [loginMode, setLoginMode] = useState<'7days' | '30days'>('7days');
-  const [e2eeEnabled, setE2eeEnabled] = useState(true);
   const [isBiometricOpen, setIsBiometricOpen] = useState(false);
   const [biometricAction, setBiometricAction] = useState<string>('');
   const [dailyClaimSuccess, setDailyClaimSuccess] = useState<string | null>(null);
-  const [milestoneModal, setMilestoneModal] = useState<{ day: 7 | 30; defaultCash: number; defaultPts: number } | null>(null);
-  const [selectedChoiceId, setSelectedChoiceId] = useState<string>('');
 
-  const currentMilestoneOptions = milestoneModal
-    ? milestoneChoices.filter(c => c.milestoneDay === milestoneModal.day)
-    : [];
+  // Today's date and per-user streak storage key
+  const todayStr = new Date().toISOString().split('T')[0];
+  const userKey = currentUser?.cid || currentUser?.name || 'visitor';
+  const streakStorageKey = `ussf_user_streak_${userKey}`;
 
-  const handleConfirmMilestoneChoice = () => {
-    if (!milestoneModal) return;
-    tacticalAudio.playTargetLock();
+  interface StreakState {
+    streak7: number;
+    lastClaim7Date: string;
+    streak30: number;
+    lastClaim30Date: string;
+  }
 
-    const chosen = currentMilestoneOptions.find(c => c.id === selectedChoiceId) || currentMilestoneOptions[0];
-    
-    // Equip reward to user profile if applicable
-    if (chosen && onUpdateProfile && currentUser) {
-      if (chosen.type === 'NAMECARD') {
-        onUpdateProfile({ namecard: chosen.rewardValue });
-      } else if (chosen.type === 'AVATAR_FRAME') {
-        onUpdateProfile({ avatarFrame: chosen.rewardValue });
-      } else if (chosen.type === 'TITLE') {
-        onUpdateProfile({ signature: `Official Title: "${chosen.rewardValue}"` });
-      }
-    }
+  const [streakData, setStreakData] = useState<StreakState>(() => {
+    try {
+      const saved = localStorage.getItem(streakStorageKey);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      streak7: 1,
+      lastClaim7Date: '',
+      streak30: 1,
+      lastClaim30Date: ''
+    };
+  });
 
-    const cash = (chosen && chosen.cashAmount) || milestoneModal.defaultCash;
-    const pts = (chosen && chosen.promotionPoints) || milestoneModal.defaultPts;
-
-    handleClaimLoginReward(milestoneModal.day, cash, pts);
-    setDailyClaimSuccess(`Milestone Day 0${milestoneModal.day} Custom Reward Claimed: "${chosen ? chosen.title : 'Milestone Pack'}" ($${cash.toLocaleString()} Cash + ${pts} Promotion Points)!`);
-    setMilestoneModal(null);
+  const saveStreak = (next: StreakState) => {
+    setStreakData(next);
+    try {
+      localStorage.setItem(streakStorageKey, JSON.stringify(next));
+    } catch {}
   };
 
+  const is7ClaimedToday = streakData.lastClaim7Date === todayStr;
+  const is30ClaimedToday = streakData.lastClaim30Date === todayStr;
+
   // Today's Financial Points Claimed (Daily cap: 50 pts)
-  const todayStr = new Date().toISOString().split('T')[0];
   const storageKey = `ussf_daily_fin_pts_${todayStr}_${currentUser?.cid || 'SF-001'}`;
   const [claimedTodayPts, setClaimedTodayPts] = useState<number>(() => {
     try {
@@ -105,22 +111,6 @@ export const USSFFinancialView: React.FC<USSFFinancialViewProps> = ({
 
   // Use the realistic catalog
   const catalog = REALISTIC_REWARD_CATALOG;
-
-  // Live ticking impressions & creator analytics
-  const [liveViews, setLiveViews] = useState(16400);
-  const [liveClicks, setLiveClicks] = useState(1380);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLiveViews(v => v + Math.floor(Math.random() * 2));
-      if (Math.random() > 0.7) {
-        setLiveClicks(c => c + 1);
-      }
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const ctrRate = ((liveClicks / liveViews) * 100).toFixed(2);
 
   const categories = [
     { id: 'ALL', label: 'All Tasks (30+)', count: catalog.length },
@@ -167,17 +157,63 @@ export const USSFFinancialView: React.FC<USSFFinancialViewProps> = ({
       return;
     }
     tacticalAudio.playTargetLock();
-    const firstSelected = catalog.find(r => r.id === selectedTaskIds[0]);
-    const firstQty = taskQuantities[selectedTaskIds[0]] || 1;
-    onOpenClaimModal(firstSelected, firstQty, totalMultiClaim);
+    const batchItems = selectedTaskIds.map(id => {
+      const reward = catalog.find(r => r.id === id);
+      const quantity = taskQuantities[id] || 1;
+      return reward ? { reward, quantity } : null;
+    }).filter((b): b is { reward: RewardItem; quantity: number } => b !== null);
+
+    if (batchItems.length === 0) return;
+    onOpenClaimModal(batchItems[0].reward, batchItems[0].quantity, totalMultiClaim, batchItems, totalMultiClaim);
   };
 
-  const handleClaimLoginReward = (day: number, cash: number, pts: number) => {
+  const handleClaimLoginReward = (day: number, cash: number, pts: number, mode: '7days' | '30days') => {
     if (!currentUser || !currentUser.isMember || currentUser.isApplicant) {
       alert('Action Restricted: Only verified active USSF members can claim daily login milestones.');
       return;
     }
+
+    if (mode === '7days') {
+      if (is7ClaimedToday) {
+        alert('You have already claimed your login reward for today. Next day unlocks tomorrow after 24 hours!');
+        return;
+      }
+      if (day !== streakData.streak7) {
+        alert(`You can only claim Day 0${streakData.streak7} today.`);
+        return;
+      }
+    } else {
+      if (is30ClaimedToday) {
+        alert('You have already claimed your monthly login reward for today. Next day unlocks tomorrow after 24 hours!');
+        return;
+      }
+      if (day !== streakData.streak30) {
+        alert(`You can only claim Day ${streakData.streak30} today.`);
+        return;
+      }
+    }
+
     tacticalAudio.playTargetLock();
+
+    let milestoneBonusNote = '';
+    // Day 7 milestone: Admin designates reward (Default: Angel Crystal Avatar Frame)
+    if (mode === '7days' && day === 7) {
+      const day7Reward = milestoneChoices.find(c => c.milestoneDay === 7);
+      const frameName = day7Reward?.type === 'AVATAR_FRAME' ? day7Reward.rewardValue : 'Angel Crystal';
+      if (onUpdateProfile) {
+        onUpdateProfile({ avatarFrame: frameName });
+      }
+      milestoneBonusNote = ` + Equipped "${frameName}" Custom Avatar Frame!`;
+    } else if (mode === '30days' && day === 30) {
+      // Day 30 milestone: Admin designates reward (Default: Supreme Gold Aureole)
+      const day30Reward = milestoneChoices.find(c => c.milestoneDay === 30);
+      const frameName = day30Reward?.type === 'AVATAR_FRAME' ? day30Reward.rewardValue : 'Supreme Gold Aureole';
+      if (onUpdateProfile) {
+        onUpdateProfile({ avatarFrame: frameName });
+      }
+      milestoneBonusNote = ` + Equipped "${frameName}" Custom Avatar Frame!`;
+    }
+
     const claim: PendingLoginRewardClaim = {
       id: `plc-${Date.now()}`,
       operatorName: currentUser.name,
@@ -193,8 +229,25 @@ export const USSFFinancialView: React.FC<USSFFinancialViewProps> = ({
       onClaimDailyLoginReward(claim);
     }
 
-    setDailyClaimSuccess(`Day 0${day} Login Reward ($${cash.toLocaleString()} Cash + ${pts} Promotion Points) claimed! Transmitted to High Command Admin Queue for disbursement approval.`);
-    setTimeout(() => setDailyClaimSuccess(null), 6000);
+    // Advance streak and record today's claim date
+    if (mode === '7days') {
+      const nextStreak = streakData.streak7 >= 7 ? 1 : streakData.streak7 + 1;
+      saveStreak({
+        ...streakData,
+        streak7: nextStreak,
+        lastClaim7Date: todayStr
+      });
+    } else {
+      const nextStreak = streakData.streak30 >= 30 ? 1 : streakData.streak30 + 1;
+      saveStreak({
+        ...streakData,
+        streak30: nextStreak,
+        lastClaim30Date: todayStr
+      });
+    }
+
+    setDailyClaimSuccess(`Day ${day < 10 ? '0' + day : day} Login Reward ($${cash.toLocaleString()} Cash + ${pts} Promotion Points) successfully claimed! Transmitted to High Command Admin Queue for cash disbursement approval${milestoneBonusNote}`);
+    setTimeout(() => setDailyClaimSuccess(null), 7000);
   };
 
   return (
@@ -344,21 +397,6 @@ export const USSFFinancialView: React.FC<USSFFinancialViewProps> = ({
             >
               <Gift className="h-4 w-4" />
               <span>7 & 30 DAY LOGIN REWARDS</span>
-            </button>
-
-            <button
-              onClick={() => {
-                tacticalAudio.playTacticalClick();
-                setActiveTab('analytics');
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-tactical font-bold uppercase transition-all cursor-pointer ${
-                activeTab === 'analytics'
-                  ? 'bg-cyan-500 text-neutral-950 shadow-lg'
-                  : 'bg-neutral-900 text-neutral-400 hover:text-white'
-              }`}
-            >
-              <TrendingUp className="h-4 w-4" />
-              <span>CREATOR ANALYTICS</span>
             </button>
 
             <button
@@ -642,90 +680,148 @@ export const USSFFinancialView: React.FC<USSFFinancialViewProps> = ({
 
               {/* 7-Day Streak Cards */}
               {loginMode === '7days' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 pt-2">
-                  {DAILY_LOGIN_REWARDS_7.map(r => (
-                    <div
-                      key={r.day}
-                      className="p-4 rounded-xl border border-neutral-800 bg-neutral-950/80 text-center flex flex-col justify-between space-y-3"
-                    >
-                      <div>
-                        <span className="text-[10px] font-data text-neutral-500 uppercase block">DAY 0{r.day}</span>
-                        <div className="mt-2 text-sm font-tactical font-black text-emerald-400">
-                          ${r.cashAmount.toLocaleString()}
-                        </div>
-                        <span className="text-[11px] font-data text-amber-400 font-bold block mt-0.5">
-                          +{r.promotionPoints} Points
-                        </span>
-                      </div>
+                <div className="space-y-3 pt-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-data bg-neutral-950 p-3 rounded-lg border border-neutral-800">
+                    <span className="text-neutral-300">
+                      CURRENT STREAK: <strong className="text-amber-400">DAY 0{streakData.streak7} OF 07</strong>
+                      {is7ClaimedToday && (
+                        <span className="text-emerald-400 ml-2 font-bold">✓ TODAY'S REWARD CLAIMED (NEXT DAY UNLOCKS TOMORROW)</span>
+                      )}
+                    </span>
+                    <span className="text-amber-400 font-bold">
+                      DAY 07 DESIGNATED REWARD: ANGEL CRYSTAL AVATAR FRAME + $15,000,000
+                    </span>
+                  </div>
 
-                      <button
-                        onClick={() => {
-                          tacticalAudio.playTargetLock();
-                          if (r.day === 7) {
-                            setSelectedChoiceId('choice-7-namecard');
-                            setMilestoneModal({ day: 7, defaultCash: r.cashAmount, defaultPts: r.promotionPoints });
-                          } else {
-                            handleClaimLoginReward(r.day, r.cashAmount, r.promotionPoints);
-                          }
-                        }}
-                        className={`w-full py-1.5 rounded text-[11px] font-data uppercase font-black tracking-wider transition-all cursor-pointer ${
-                          r.day === 7
-                            ? 'bg-amber-500 hover:bg-amber-400 text-neutral-950 shadow-lg shadow-amber-500/20'
-                            : 'bg-emerald-500 hover:bg-emerald-400 text-neutral-950'
-                        }`}
-                      >
-                        {r.day === 7 ? 'CHOOSE REWARD ★' : 'CLAIM REWARD'}
-                      </button>
-                    </div>
-                  ))}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                    {DAILY_LOGIN_REWARDS_7.map(r => {
+                      const isClaimedToday = is7ClaimedToday && r.day === (streakData.streak7 >= 2 ? streakData.streak7 - 1 : 7);
+                      const isPastClaimed = r.day < streakData.streak7;
+                      const isCurrentClaimable = r.day === streakData.streak7 && !is7ClaimedToday;
+
+                      return (
+                        <div
+                          key={r.day}
+                          className={`p-4 rounded-xl border text-center flex flex-col justify-between space-y-3 transition-all ${
+                            isCurrentClaimable
+                              ? 'border-emerald-500/80 bg-emerald-950/20 shadow-lg shadow-emerald-500/10'
+                              : isPastClaimed || isClaimedToday
+                              ? 'border-neutral-800 bg-neutral-950/40 opacity-70'
+                              : 'border-neutral-800/60 bg-neutral-950/80'
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between text-[10px] font-data text-neutral-500 uppercase">
+                              <span>DAY 0{r.day}</span>
+                              {r.day === 7 && (
+                                <span className="text-amber-400 font-bold">★ FRAME</span>
+                              )}
+                            </div>
+                            <div className="mt-2 text-sm font-tactical font-black text-emerald-400">
+                              ${r.cashAmount.toLocaleString()}
+                            </div>
+                            <span className="text-[11px] font-data text-amber-400 font-bold block mt-0.5">
+                              +{r.promotionPoints} Points
+                            </span>
+                            {r.day === 7 && (
+                              <span className="text-[9px] font-data text-purple-400 font-bold block mt-1">
+                                + Angel Crystal Frame
+                              </span>
+                            )}
+                          </div>
+
+                          {isPastClaimed || isClaimedToday ? (
+                            <div className="w-full py-1.5 rounded text-[11px] font-data uppercase font-bold bg-neutral-900 text-neutral-500 border border-neutral-800 flex items-center justify-center gap-1">
+                              <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                              <span>CLAIMED</span>
+                            </div>
+                          ) : isCurrentClaimable ? (
+                            <button
+                              onClick={() => handleClaimLoginReward(r.day, r.cashAmount, r.promotionPoints, '7days')}
+                              className={`w-full py-1.5 rounded text-[11px] font-data uppercase font-black tracking-wider transition-all cursor-pointer shadow-lg ${
+                                r.day === 7
+                                  ? 'bg-amber-500 hover:bg-amber-400 text-neutral-950 shadow-amber-500/20'
+                                  : 'bg-emerald-500 hover:bg-emerald-400 text-neutral-950'
+                              }`}
+                            >
+                              {r.day === 7 ? 'CLAIM FRAME ★' : 'CLAIM REWARD'}
+                            </button>
+                          ) : (
+                            <div className="w-full py-1.5 rounded text-[10px] font-data uppercase font-bold bg-neutral-950 text-neutral-600 border border-neutral-800/80 flex items-center justify-center gap-1">
+                              <Lock className="h-3 w-3 text-neutral-600" />
+                              <span>LOCKED</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
               {/* 30-Day Monthly Calendar Grid */}
               {loginMode === '30days' && (
-                <div>
-                  <div className="flex items-center justify-between text-xs font-data text-neutral-400 mb-3">
-                    <span>30-DAY MONTHLY ENLISTMENT TRACK</span>
-                    <span className="text-amber-400 font-bold">DAY 30 GRAND BOUNTY: $25,000,000 + 1,000 POINTS</span>
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-data bg-neutral-950 p-3 rounded-lg border border-neutral-800">
+                    <span className="text-neutral-300">
+                      CURRENT PROGRESS: <strong className="text-amber-400">DAY {streakData.streak30} OF 30</strong>
+                      {is30ClaimedToday && (
+                        <span className="text-emerald-400 ml-2 font-bold">✓ TODAY'S REWARD CLAIMED (NEXT DAY UNLOCKS TOMORROW)</span>
+                      )}
+                    </span>
+                    <span className="text-amber-400 font-bold">
+                      DAY 30 GRAND BOUNTY: $25,000,000 + 1,000 PTS + SUPREME GOLD AUREOLE FRAME
+                    </span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-10 gap-2.5">
-                    {DAILY_LOGIN_REWARDS_30.map(r => (
-                      <div
-                        key={r.day}
-                        className={`p-2.5 rounded-lg border text-center flex flex-col justify-between ${
-                          r.day % 7 === 0 || r.day === 30
-                            ? 'border-amber-500/60 bg-amber-950/30'
-                            : 'border-neutral-800 bg-neutral-950'
-                        }`}
-                      >
-                        <span className="text-[9px] font-data text-neutral-500 uppercase">DAY {r.day}</span>
-                        <div className="text-xs font-tactical font-black text-emerald-400 mt-1">
-                          ${(r.cashAmount / 1000000).toFixed(1)}M
-                        </div>
-                        <div className="text-[9px] font-data text-amber-400 font-bold">
-                          +{r.promotionPoints} Pts
-                        </div>
-                        <button
-                          onClick={() => {
-                            tacticalAudio.playTargetLock();
-                            if (r.day === 30 || r.day === 7 || r.day === 14 || r.day === 21 || r.day === 28) {
-                              const targetDay = r.day === 30 ? 30 : 7;
-                              setSelectedChoiceId(targetDay === 30 ? 'choice-30-namecard' : 'choice-7-namecard');
-                              setMilestoneModal({ day: targetDay, defaultCash: r.cashAmount, defaultPts: r.promotionPoints });
-                            } else {
-                              handleClaimLoginReward(r.day, r.cashAmount, r.promotionPoints);
-                            }
-                          }}
-                          className={`mt-2 w-full py-1 rounded text-[9px] font-data uppercase font-bold transition-colors cursor-pointer ${
-                            r.day === 30 || r.day % 7 === 0
-                              ? 'bg-amber-500 hover:bg-amber-400 text-neutral-950 shadow'
-                              : 'bg-neutral-800 hover:bg-amber-500 hover:text-neutral-950 text-neutral-200'
-                          }`}
+                    {DAILY_LOGIN_REWARDS_30.map(r => {
+                      const isClaimedToday = is30ClaimedToday && r.day === (streakData.streak30 >= 2 ? streakData.streak30 - 1 : 30);
+                      const isPastClaimed = r.day < streakData.streak30;
+                      const isCurrentClaimable = r.day === streakData.streak30 && !is30ClaimedToday;
+
+                      return (
+                        <div
+                          key={r.day}
+                          className={`p-2.5 rounded-lg border text-center flex flex-col justify-between ${
+                            isCurrentClaimable
+                              ? 'border-emerald-500/80 bg-emerald-950/30'
+                              : r.day % 7 === 0 || r.day === 30
+                              ? 'border-amber-500/60 bg-amber-950/30'
+                              : 'border-neutral-800 bg-neutral-950'
+                          } ${isPastClaimed || isClaimedToday ? 'opacity-70' : ''}`}
                         >
-                          {r.day === 30 || r.day % 7 === 0 ? 'CHOOSE ★' : 'CLAIM'}
-                        </button>
-                      </div>
-                    ))}
+                          <span className="text-[9px] font-data text-neutral-500 uppercase">DAY {r.day}</span>
+                          <div className="text-xs font-tactical font-black text-emerald-400 mt-1">
+                            ${(r.cashAmount / 1000000).toFixed(1)}M
+                          </div>
+                          <div className="text-[9px] font-data text-amber-400 font-bold">
+                            +{r.promotionPoints} Pts
+                          </div>
+                          {isPastClaimed || isClaimedToday ? (
+                            <div className="mt-2 w-full py-1 rounded text-[9px] font-data uppercase font-bold bg-neutral-900 text-neutral-500 border border-neutral-800 flex items-center justify-center gap-0.5">
+                              <CheckCircle2 className="h-2.5 w-2.5 text-emerald-500" />
+                              <span>CLAIMED</span>
+                            </div>
+                          ) : isCurrentClaimable ? (
+                            <button
+                              onClick={() => handleClaimLoginReward(r.day, r.cashAmount, r.promotionPoints, '30days')}
+                              className={`mt-2 w-full py-1 rounded text-[9px] font-data uppercase font-bold transition-colors cursor-pointer ${
+                                r.day === 30
+                                  ? 'bg-amber-500 hover:bg-amber-400 text-neutral-950 font-black shadow'
+                                  : 'bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold'
+                              }`}
+                            >
+                              {r.day === 30 ? 'CLAIM ★' : 'CLAIM'}
+                            </button>
+                          ) : (
+                            <div className="mt-2 w-full py-1 rounded text-[9px] font-data uppercase font-bold bg-neutral-950 text-neutral-600 border border-neutral-800/80 flex items-center justify-center gap-0.5">
+                              <Lock className="h-2.5 w-2.5 text-neutral-600" />
+                              <span>LOCKED</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -733,135 +829,7 @@ export const USSFFinancialView: React.FC<USSFFinancialViewProps> = ({
           </div>
         )}
 
-        {/* TAB 3: REAL-TIME CREATOR REVENUE ANALYTICS */}
-        {activeTab === 'analytics' && (
-          <div className="space-y-6">
-            <div className="p-6 rounded-2xl border border-neutral-800 bg-neutral-900/80 space-y-6">
-              <div className="border-b border-neutral-800 pb-4">
-                <span className="text-xs font-data text-cyan-400 uppercase tracking-widest font-bold block mb-1">
-                  CONTENT CREATOR MONETIZATION & TELEMETRY
-                </span>
-                <h3 className="text-2xl font-tactical font-black uppercase text-white">
-                  REAL-TIME ENGAGEMENT & EARNINGS DASHBOARD
-                </h3>
-              </div>
 
-              {/* Live Counters */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="p-4 rounded-xl border border-neutral-800 bg-neutral-950/70">
-                  <span className="text-neutral-500 text-[10px] font-data uppercase block">ESTIMATED REVENUE</span>
-                  <div className="text-2xl sm:text-3xl font-black font-tactical text-emerald-400 mt-1">
-                    ${((liveViews * 0.05) + (liveClicks * 0.35)).toFixed(2)}
-                  </div>
-                  <span className="text-[10px] font-data text-emerald-500/80 mt-1 block">
-                    ▲ +14.2% This Week
-                  </span>
-                </div>
-
-                <div className="p-4 rounded-xl border border-neutral-800 bg-neutral-950/70">
-                  <span className="text-neutral-500 text-[10px] font-data uppercase block">TOTAL DISPATCH VIEWS</span>
-                  <div className="text-2xl sm:text-3xl font-black font-tactical text-neutral-100 mt-1 tabular-nums">
-                    {liveViews.toLocaleString()}
-                  </div>
-                  <span className="text-[10px] font-data text-neutral-500 mt-1 block">Live Ticking Telemetry</span>
-                </div>
-
-                <div className="p-4 rounded-xl border border-neutral-800 bg-neutral-950/70">
-                  <span className="text-neutral-500 text-[10px] font-data uppercase block">DISPATCH CLICKS</span>
-                  <div className="text-2xl sm:text-3xl font-black font-tactical text-amber-400 mt-1 tabular-nums">
-                    {liveClicks.toLocaleString()}
-                  </div>
-                  <span className="text-[10px] font-data text-neutral-500 mt-1 block">Direct Profile Link Clicks</span>
-                </div>
-
-                <div className="p-4 rounded-xl border border-neutral-800 bg-neutral-950/70">
-                  <span className="text-neutral-500 text-[10px] font-data uppercase block">CLICK-THROUGH RATE (CTR)</span>
-                  <div className="text-2xl sm:text-3xl font-black font-tactical text-cyan-400 mt-1 tabular-nums">
-                    {ctrRate}%
-                  </div>
-                  <span className="text-[10px] font-data text-emerald-500/80 mt-1 block">Optimal Conversion</span>
-                </div>
-              </div>
-
-              {/* Audience Demographics */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                <div className="p-5 rounded-xl border border-neutral-800 bg-neutral-950/80 space-y-3">
-                  <span className="text-xs font-data text-neutral-400 uppercase font-bold block border-b border-neutral-800 pb-2">
-                    AUDIENCE BY SAN ANDREAS SECTORS
-                  </span>
-                  <div className="space-y-2 text-xs font-data">
-                    <div>
-                      <div className="flex justify-between text-neutral-300 mb-1">
-                        <span>Los Santos Metro Core</span>
-                        <span className="text-emerald-400 font-bold">48%</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-neutral-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-500 w-[48%]" />
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-neutral-300 mb-1">
-                        <span>Las Venturas High Rolling District</span>
-                        <span className="text-amber-400 font-bold">32%</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-neutral-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-amber-500 w-[32%]" />
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-neutral-300 mb-1">
-                        <span>Bone County Desert Border</span>
-                        <span className="text-cyan-400 font-bold">20%</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-neutral-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-cyan-500 w-[20%]" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-5 rounded-xl border border-neutral-800 bg-neutral-950/80 space-y-3">
-                  <span className="text-xs font-data text-neutral-400 uppercase font-bold block border-b border-neutral-800 pb-2">
-                    DEVICE TELEMETRY & ACCESS PLATFORMS
-                  </span>
-                  <div className="space-y-2 text-xs font-data">
-                    <div>
-                      <div className="flex justify-between text-neutral-300 mb-1">
-                        <span>Desktop Mil-Spec Terminals</span>
-                        <span className="text-emerald-400 font-bold">64%</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-neutral-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-500 w-[64%]" />
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-neutral-300 mb-1">
-                        <span>Mobile Field Tablets</span>
-                        <span className="text-amber-400 font-bold">28%</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-neutral-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-amber-500 w-[28%]" />
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-neutral-300 mb-1">
-                        <span>Tactical In-Car MDC Units</span>
-                        <span className="text-cyan-400 font-bold">8%</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-neutral-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-cyan-500 w-[8%]" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* TAB 4: TREASURY AUDIT LOG */}
         {activeTab === 'claims' && (
@@ -908,106 +876,7 @@ export const USSFFinancialView: React.FC<USSFFinancialViewProps> = ({
         )}
       </div>
 
-      {/* Milestone Custom Choose Event Modal */}
-      {milestoneModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
-          <div className="w-full max-w-2xl bg-neutral-950 border-2 border-amber-500 rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95">
-            <div className="flex items-start justify-between border-b border-neutral-800 pb-4">
-              <div>
-                <div className="flex items-center gap-2 text-xs font-data text-amber-400 font-bold uppercase tracking-widest mb-1">
-                  <Crown className="h-4 w-4" />
-                  <span>SPECIAL FORCES MILESTONE CHOOSE EVENT</span>
-                </div>
-                <h2 className="text-2xl font-black font-tactical uppercase text-white">
-                  DAY 0{milestoneModal.day} CUSTOM REWARD PACKAGE
-                </h2>
-                <p className="text-xs text-neutral-300 font-sans mt-1">
-                  Select your custom reward package. Choose between an exclusive Namecard Banner, a glowing Avatar Frame, an official Commendation Title, or an instant Treasury Cash & Points jackpot!
-                </p>
-              </div>
-              <button
-                onClick={() => setMilestoneModal(null)}
-                className="text-neutral-500 hover:text-white p-1 cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
 
-            {/* Options Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {currentMilestoneOptions.map((choice) => {
-                const isSelected = selectedChoiceId === choice.id;
-
-                return (
-                  <div
-                    key={choice.id}
-                    onClick={() => {
-                      tacticalAudio.playTacticalClick();
-                      setSelectedChoiceId(choice.id);
-                    }}
-                    className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
-                      isSelected
-                        ? 'border-amber-400 bg-amber-950/40 shadow-lg shadow-amber-500/10 scale-[1.02]'
-                        : 'border-neutral-800 bg-neutral-900/60 hover:border-neutral-700'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between text-[10px] font-data uppercase mb-1.5">
-                        <span className="px-2 py-0.5 rounded bg-black/80 text-amber-300 font-bold border border-neutral-700">
-                          {choice.type.replace('_', ' ')}
-                        </span>
-                        {isSelected && (
-                          <span className="text-amber-400 font-bold flex items-center gap-1">
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            <span>SELECTED</span>
-                          </span>
-                        )}
-                      </div>
-                      <h4 className="text-sm font-tactical font-black uppercase text-white">
-                        {choice.title}
-                      </h4>
-                      <p className="text-xs font-sans text-neutral-300 mt-1 leading-relaxed">
-                        {choice.description}
-                      </p>
-                    </div>
-
-                    <div className="pt-2 border-t border-neutral-800/80 flex items-center justify-between text-xs font-data">
-                      <span className="text-neutral-400 text-[10px]">EQUIPS TO:</span>
-                      <span className="text-emerald-400 font-bold font-mono">
-                        {choice.rewardValue}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Modal Actions */}
-            <div className="pt-3 border-t border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <span className="text-xs font-data text-neutral-400">
-                Reward automatically equips directly to your official USSF operator profile.
-              </span>
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={() => setMilestoneModal(null)}
-                  className="px-4 py-2 rounded-lg bg-neutral-900 text-neutral-300 hover:text-white font-data text-xs cursor-pointer flex-1 sm:flex-initial"
-                >
-                  CANCEL
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmMilestoneChoice}
-                  className="px-6 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-neutral-950 font-black font-tactical uppercase text-xs cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 flex-1 sm:flex-initial"
-                >
-                  <Award className="h-4 w-4" />
-                  <span>CONFIRM & CLAIM REWARD</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Biometric Verification Modal */}
       <BiometricModal

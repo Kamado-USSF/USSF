@@ -262,7 +262,7 @@ export const USSFHeader: React.FC<USSFHeaderProps> = ({
                     }`}
                   >
                     <span>RANK AND ROSTER</span>
-                    <span className="text-[10px] font-mono opacity-80">22 Ranks</span>
+                    <span className="text-[10px] font-mono opacity-80">20 Ranks</span>
                   </button>
                   <button
                     onClick={() => handleNav('leaders')}
@@ -451,22 +451,24 @@ export const USSFHeader: React.FC<USSFHeaderProps> = ({
 
         {/* Right Section: Notification Center & User Account Menu */}
         <div className="flex items-center gap-2.5">
-          {/* Notification Bell */}
-          <button
-            onClick={() => {
-              tacticalAudio.playTacticalClick();
-              onOpenNotifications();
-            }}
-            className="relative p-2 rounded-lg bg-neutral-900 border border-neutral-800 hover:border-amber-400 text-neutral-300 transition-colors cursor-pointer"
-            title="Tactical Notifications"
-          >
-            <Bell className="h-4 w-4" />
-            {unreadNotificationCount > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white ring-2 ring-neutral-950 animate-pulse">
-                {unreadNotificationCount}
-              </span>
-            )}
-          </button>
+          {/* Notification Bell (Visible exclusively to verified USSF Members) */}
+          {currentUser && currentUser.isMember && (
+            <button
+              onClick={() => {
+                tacticalAudio.playTacticalClick();
+                onOpenNotifications();
+              }}
+              className="relative p-2 rounded-lg bg-neutral-900 border border-neutral-800 hover:border-amber-400 text-neutral-300 transition-colors cursor-pointer"
+              title="Tactical Notifications"
+            >
+              <Bell className="h-4 w-4" />
+              {unreadNotificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white ring-2 ring-neutral-950 animate-pulse">
+                  {unreadNotificationCount}
+                </span>
+              )}
+            </button>
+          )}
 
           {/* Quick Presence Status Switcher (Online / Idle / DND) */}
           {currentUser && (

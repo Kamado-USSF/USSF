@@ -157,6 +157,102 @@
   border: 1.5px solid #71717a;
 }
 
+/* 19 Ornate Custom Avatar Frames */
+.frame-angel-crystal {
+  border: 2.5px solid #38bdf8;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.6), inset 0 0 8px rgba(56, 189, 248, 0.3);
+}
+
+.frame-ice-cat {
+  border: 2.5px solid #7dd3fc;
+  box-shadow: 0 0 16px rgba(125, 211, 252, 0.65), inset 0 0 6px rgba(125, 211, 252, 0.3);
+}
+
+.frame-gothic-skull {
+  border: 2.5px solid #a3a3a3;
+  box-shadow: 0 0 14px rgba(163, 163, 163, 0.5), inset 0 0 8px rgba(0, 0, 0, 0.6);
+}
+
+.frame-cosmic-maiden {
+  border: 2.5px solid #c084fc;
+  box-shadow: 0 0 16px rgba(192, 132, 252, 0.65), inset 0 0 8px rgba(192, 132, 252, 0.35);
+}
+
+.frame-archangel-wings {
+  border: 2.5px solid #fde047;
+  box-shadow: 0 0 18px rgba(253, 224, 71, 0.6), inset 0 0 10px rgba(253, 224, 71, 0.35);
+}
+
+.frame-kitsune-mask {
+  border: 2.5px solid #fb923c;
+  box-shadow: 0 0 16px rgba(251, 146, 60, 0.65), inset 0 0 8px rgba(251, 146, 60, 0.3);
+}
+
+.frame-abyssal-dragon {
+  border: 2.5px solid #818cf8;
+  box-shadow: 0 0 18px rgba(129, 140, 248, 0.7), inset 0 0 8px rgba(129, 140, 248, 0.35);
+}
+
+.frame-obsidian-eyes {
+  border: 2.5px solid #f43f5e;
+  box-shadow: 0 0 16px rgba(244, 63, 94, 0.65), inset 0 0 8px rgba(244, 63, 94, 0.3);
+}
+
+.frame-enso-blood {
+  border: 2.5px solid #e11d48;
+  box-shadow: 0 0 16px rgba(225, 29, 72, 0.7), inset 0 0 8px rgba(225, 29, 72, 0.4);
+}
+
+.frame-chrono-gear {
+  border: 2.5px solid #f59e0b;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.6), inset 0 0 8px rgba(245, 158, 11, 0.3);
+}
+
+.frame-toxic-emerald {
+  border: 2.5px solid #10b981;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.65), inset 0 0 8px rgba(16, 185, 129, 0.3);
+}
+
+.frame-sakura-bonsai {
+  border: 2.5px solid #f472b6;
+  box-shadow: 0 0 16px rgba(244, 114, 182, 0.65), inset 0 0 8px rgba(244, 114, 182, 0.3);
+}
+
+.frame-higanbana-ruby {
+  border: 2.5px solid #ef4444;
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.7), inset 0 0 8px rgba(239, 68, 68, 0.35);
+}
+
+.frame-void-smoke {
+  border: 2.5px solid #a855f7;
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.65), inset 0 0 8px rgba(168, 85, 247, 0.35);
+}
+
+.frame-neuvillette-hydro {
+  border: 2.5px solid #06b6d4;
+  box-shadow: 0 0 18px rgba(6, 182, 212, 0.7), inset 0 0 8px rgba(6, 182, 212, 0.35);
+}
+
+.frame-briar-blood-rose {
+  border: 2.5px solid #be123c;
+  box-shadow: 0 0 16px rgba(190, 18, 60, 0.7), inset 0 0 8px rgba(190, 18, 60, 0.35);
+}
+
+.frame-pastel-galaxy {
+  border: 2.5px solid #e879f9;
+  box-shadow: 0 0 16px rgba(232, 121, 249, 0.65), inset 0 0 8px rgba(232, 121, 249, 0.35);
+}
+
+.frame-celestial-tiara {
+  border: 2.5px solid #38bdf8;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.7), inset 0 0 8px rgba(56, 189, 248, 0.4);
+}
+
+.frame-wolf-ears-paw {
+  border: 2.5px solid #94a3b8;
+  box-shadow: 0 0 16px rgba(148, 163, 184, 0.6), inset 0 0 8px rgba(148, 163, 184, 0.3);
+}
+
 /* Name Glow Styles & Genshin / Wuwa / NTE Prestige Aesthetics */
 .name-style-gold {
   color: #fde047;

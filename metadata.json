@@ -1,6 +1,6 @@
 {
-  "name": "Aegis Tactical - Elite Defense Systems & 15s Mission Reel",
-  "description": "Premium tactical systems, military force operations, interactive 15-second cinematic video reel, and scroll-animated mission showcases.",
+  "name": "USSF — United States Special Forces (CIT2 Law Group)",
+  "description": "Official operations portal for United States Special Forces on CIT2: verified personnel roster, career promotions hierarchy, tactical treasury payouts, daily login milestones, and command operations.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

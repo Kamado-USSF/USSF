@@ -154,9 +154,9 @@ export const USSFLeadersView: React.FC<USSFLeadersViewProps> = ({
         {/* Leaders Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {leaderMembers.map(leader => {
-            const canEditThisLeader = currentUser && (
-              currentUser.cid === leader.cid || currentUser.isOwner || currentUser.rankLevel === 22
-            );
+            const canEditThisLeader = Boolean(currentUser && (
+              currentUser.cid === leader.cid || currentUser.isOwner || (currentUser.rankLevel && currentUser.rankLevel >= 20) || currentUser.isAdmin
+            ));
 
             const leaderBanner = leader.namecardBgUrl || (leader.namecard && leader.namecard.startsWith('http') ? leader.namecard : null);
 

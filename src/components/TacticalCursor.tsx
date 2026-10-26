@@ -139,21 +139,21 @@ export const TacticalCursor: React.FC<TacticalCursorProps> = ({
     >
       {/* 1. Tactical Crosshair Laser */}
       {cursorType === 'crosshair-laser' && (
-        <div className="relative h-10 w-10 flex items-center justify-center">
+        <div className="relative h-6 w-6 flex items-center justify-center">
           <div className={`absolute inset-0 rounded-full border border-dashed transition-colors duration-150 ${
             isHovered ? 'border-amber-400 animate-spin-slow' : 'border-rose-500/80'
           }`} />
-          <div className="absolute h-full w-[1.5px] bg-rose-500 shadow-[0_0_8px_#ef4444]" />
-          <div className="absolute w-full h-[1.5px] bg-rose-500 shadow-[0_0_8px_#ef4444]" />
-          <div className={`h-2 w-2 rounded-full shadow-[0_0_10px_#ef4444] transition-colors ${
-            isHovered ? 'bg-amber-400 shadow-[0_0_12px_#f59e0b]' : 'bg-rose-500'
+          <div className="absolute h-full w-[1px] bg-rose-500 shadow-[0_0_6px_#ef4444]" />
+          <div className="absolute w-full h-[1px] bg-rose-500 shadow-[0_0_6px_#ef4444]" />
+          <div className={`h-1.5 w-1.5 rounded-full shadow-[0_0_8px_#ef4444] transition-colors ${
+            isHovered ? 'bg-amber-400 shadow-[0_0_10px_#f59e0b]' : 'bg-rose-500'
           }`} />
           {isHovered && (
             <>
-              <span className="absolute -top-1 -left-1 text-[8px] font-mono text-amber-400">◤</span>
-              <span className="absolute -top-1 -right-1 text-[8px] font-mono text-amber-400">◥</span>
-              <span className="absolute -bottom-1 -left-1 text-[8px] font-mono text-amber-400">◣</span>
-              <span className="absolute -bottom-1 -right-1 text-[8px] font-mono text-amber-400">◢</span>
+              <span className="absolute -top-0.5 -left-0.5 text-[6px] font-mono text-amber-400">◤</span>
+              <span className="absolute -top-0.5 -right-0.5 text-[6px] font-mono text-amber-400">◥</span>
+              <span className="absolute -bottom-0.5 -left-0.5 text-[6px] font-mono text-amber-400">◣</span>
+              <span className="absolute -bottom-0.5 -right-0.5 text-[6px] font-mono text-amber-400">◢</span>
             </>
           )}
         </div>
@@ -161,26 +161,26 @@ export const TacticalCursor: React.FC<TacticalCursorProps> = ({
 
       {/* 2. Precision Laser Dot */}
       {cursorType === 'tactical-dot' && (
-        <div className="relative h-8 w-8 flex items-center justify-center">
+        <div className="relative h-5 w-5 flex items-center justify-center">
           <div className="absolute inset-0 rounded-full border border-cyan-400/60 animate-ping opacity-40" />
-          <div className="h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_12px_#06b6d4]" />
+          <div className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#06b6d4]" />
           {isHovered && (
-            <div className="absolute inset-0 rounded-full border-2 border-amber-400 shadow-[0_0_8px_#f59e0b]" />
+            <div className="absolute inset-0 rounded-full border border-amber-400 shadow-[0_0_6px_#f59e0b]" />
           )}
         </div>
       )}
 
       {/* 3. Sniper Reticle Scope */}
       {cursorType === 'sniper-scope' && (
-        <div className="relative h-12 w-12 flex items-center justify-center">
-          <div className={`absolute inset-0 rounded-full border-2 transition-colors ${
-            isHovered ? 'border-emerald-400 bg-emerald-950/20 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'border-neutral-200/80 bg-neutral-950/20'
+        <div className="relative h-7 w-7 flex items-center justify-center">
+          <div className={`absolute inset-0 rounded-full border transition-colors ${
+            isHovered ? 'border-emerald-400 bg-emerald-950/20 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'border-neutral-200/80 bg-neutral-950/20'
           }`} />
           <div className="absolute h-full w-[1px] bg-neutral-300" />
           <div className="absolute w-full h-[1px] bg-neutral-300" />
-          <div className="absolute -top-1 h-1 w-1 bg-amber-400 rounded-full shadow-[0_0_4px_#fbbf24]" />
-          <div className="absolute -bottom-1 h-1 w-1 bg-amber-400 rounded-full shadow-[0_0_4px_#fbbf24]" />
-          <div className="h-1.5 w-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]" />
+          <div className="absolute -top-0.5 h-0.5 w-0.5 bg-amber-400 rounded-full shadow-[0_0_4px_#fbbf24]" />
+          <div className="absolute -bottom-0.5 h-0.5 w-0.5 bg-amber-400 rounded-full shadow-[0_0_4px_#fbbf24]" />
+          <div className="h-1 w-1 rounded-full bg-rose-500 shadow-[0_0_6px_#f43f5e]" />
         </div>
       )}
     </div>

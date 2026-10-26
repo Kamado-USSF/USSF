@@ -324,7 +324,109 @@ export const api = {
     return json.post;
   },
 
-  // 11. Reset Clean DB
+  // 11. Account Link Requests
+  async submitLinkRequest(request: AccountLinkRequest): Promise<AccountLinkRequest> {
+    const res = await fetch('/api/link-requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request)
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || 'Failed to submit account link request');
+    }
+    return json.linkRequest;
+  },
+
+  async reviewLinkRequest(id: string, status: string, reviewedBy?: string, rejectionReason?: string): Promise<AccountLinkRequest> {
+    const res = await fetch(`/api/link-requests/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, reviewedBy, rejectionReason })
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || 'Failed to review link request');
+    }
+    return json.linkRequest;
+  },
+
+  // 12. Login Reward Claims
+  async submitLoginClaim(claim: PendingLoginRewardClaim): Promise<PendingLoginRewardClaim> {
+    const res = await fetch('/api/login-claims', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(claim)
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || 'Failed to submit login reward claim');
+    }
+    return json.claim;
+  },
+
+  async reviewLoginClaim(id: string, status: string, reviewedBy?: string, rejectionReason?: string): Promise<PendingLoginRewardClaim> {
+    const res = await fetch(`/api/login-claims/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, reviewedBy, rejectionReason })
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || 'Failed to review login reward claim');
+    }
+    return json.claim;
+  },
+
+  // 13. Milestone Choices Config
+  async getMilestoneChoices(): Promise<any[]> {
+    const res = await fetch('/api/milestone-choices');
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || 'Failed to fetch milestone choices');
+    }
+    return json.choices;
+  },
+
+  async saveMilestoneChoices(choices: any[]): Promise<any[]> {
+    const res = await fetch('/api/milestone-choices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ choices })
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || 'Failed to update milestone choices');
+    }
+    return json.choices;
+  },
+
+  // 14. Custom Assets (Skins & Shaders)
+  async saveCustomAsset(asset: USSFAssetItem): Promise<USSFAssetItem> {
+    const res = await fetch('/api/custom-assets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(asset)
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || 'Failed to save custom asset');
+    }
+    return json.asset;
+  },
+
+  async deleteCustomAsset(id: string): Promise<boolean> {
+    const res = await fetch(`/api/custom-assets/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || 'Failed to delete custom asset');
+    }
+    return true;
+  },
+
+  // 15. Reset Clean DB
   async resetCleanDatabase(): Promise<void> {
     const res = await fetch('/api/reset-clean', { method: 'POST' });
     await parseApiResponse<{ success: boolean; error?: string }>(res, 'Reset database');

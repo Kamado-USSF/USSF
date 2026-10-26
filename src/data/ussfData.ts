@@ -248,26 +248,7 @@ export const CUSTOM_CURSORS_CATALOG: CustomCursorItem[] = [
     previewImage: '/assets/aistudio/INfamous_Abigail_Walker_Cursor--cursor--SweezyCursors_66af82c7.png',
     description: 'Abigail Walker neon conduit blazing magenta dagger.'
   },
-  {
-    id: 'ussf-arrow',
-    name: 'USSF Red Tactical Arrow',
-    category: 'Special Forces',
-    cursorUrl: '/assets/cursors/ussf_arrow.png',
-    pointerUrl: '/assets/cursors/ussf_arrow.png',
-    hotspot: [0, 0],
-    previewImage: '/assets/aistudio/7e8351e4350260d2523875f5f4230178_3ed76379.jpg',
-    description: 'Official USSF command silver-winged chevron with glowing red chevron core.'
-  },
-  {
-    id: 'neon-lightning',
-    name: 'Neon Violet Lightning Arrow',
-    category: 'Special Forces',
-    cursorUrl: '/assets/cursors/neon_lightning.png',
-    pointerUrl: '/assets/cursors/neon_lightning.png',
-    hotspot: [0, 0],
-    previewImage: '/assets/aistudio/6e096465035a6a1d8d8e19d9dcd86108_ad711924.jpg',
-    description: 'Electric violet lightning strike projectile cursor.'
-  },
+
   {
     id: 'crosshair-laser',
     name: 'Tactical Crosshair Laser',
