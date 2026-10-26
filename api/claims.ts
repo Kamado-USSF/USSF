@@ -39,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!Number.isFinite(amount) || amount <= 0 || amount > 1_000_000_000_000) {
     return res.status(400).json({ success: false, error: 'Invalid claim: amount must be a positive number.' });
   }
-  if (!date || !/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || Number.isNaN(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) {
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) {
     return res.status(400).json({ success: false, error: 'Invalid claim: date must be a real calendar date in YYYY-MM-DD format.' });
   }
   if (!validHttpUrl(proofUrl)) {
